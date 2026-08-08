@@ -1,0 +1,21 @@
+.rules-section { background: var(--paper); color: #2a2340; }
+.rules-section > div:first-child { display: flex; align-items: end; justify-content: space-between; }
+.rules-section h2 { margin: 0; font-size: clamp(38px, 4vw, 60px); letter-spacing: -.06em; }
+.rules-section .eyebrow { color: #6f4e00; }
+.rule-grid { display: grid; grid-template-columns: repeat(4,1fr); margin-top: 44px; border-top: 1px solid rgba(42,35,64,.25); border-bottom: 1px solid rgba(42,35,64,.25); }
+.rule-grid article { min-height: 220px; padding: 23px; border-right: 1px solid rgba(42,35,64,.25); }
+.rule-grid article:last-child { border-right: 0; }
+.rule-grid span { font: 800 11px/1 ui-monospace, monospace; }
+.rule-grid h3 { margin: 48px 0 10px; font-size: 17px; }
+.rule-grid p { margin: 0; font-size: 11px; line-height: 1.8; opacity: .72; }
+.source-note { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 40px; margin-top: 28px; }
+.source-note p { max-width: 780px; margin: 0; font-size: 10px; line-height: 1.8; opacity: .78; }
+.source-note div { display: flex; gap: 18px; }
+.source-note a { font-size: 10px; font-weight: 800; border-bottom: 1px solid currentColor; }
+
+footer { min-height: 150px; position: relative; padding: 48px max(28px, calc((100vw - 1440px) / 2)) 42px; display: flex; align-items: center; gap: 32px; background: var(--paper); color: var(--ink); border-top: 0; }
+footer::before { content: ""; position: absolute; top: 0; left: 50%; width: min(1280px, calc(100% - 96px)); height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, rgba(33,29,51,.11) 20%, rgba(33,29,51,.11) 80%, transparent); }
+footer span { font-weight: 850; }
+footer p { margin: 0; color: var(--muted); font-size: 10px; }
+footer a { margin-left: auto; color: var(--muted); font-size: 10px; }
+.toast { position: fixed; z-index: 20; left: 50%; bottom: 28px; transform: translateX(-50%); padding: 12px 18px; border-radius: 12px; background: #211d33; color: white; font-size: 12px; box-shadow: 0 14px 35px rgba(0,0,0,.22); }
