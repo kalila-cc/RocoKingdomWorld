@@ -117,6 +117,8 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(html, /横、竖或斜角紧邻/);
   assert.doesNotMatch(html, /曼哈顿距离/);
   assert.match(html, /class="side-nav"/);
+  assert.match(html, /class="active" aria-current="location" href="#top"/);
+  assert.match(html, /class="back-to-top" href="#top"/);
   assert.match(html, /data-pet-total/);
   assert.match(html, /id="dataVersionText"/);
   assert.match(html, /id="eggGroupFilter"/);
@@ -124,6 +126,7 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(html, /按蛋组查看图鉴/);
   assert.match(app, /PETS\.length/);
   assert.match(app, /SEASON_KEYS/);
+  assert.match(app, /IntersectionObserver/);
   assert.match(updater, /api\/shiny-transfer-planner/);
   assert.match(updater, /api\/shiny-transfer-summary/);
   assert.match(updater, /action=ask/);
@@ -145,6 +148,10 @@ test("offline package is self-contained and data-complete", async () => {
   assert.ok(offlinePaths.every((path) => /^[\x00-\x7F]+$/.test(path)), "离线包内的目录和文件名必须全部使用 ASCII");
   assert.match(style, /\.side-nav\s*\{[^}]*width:\s*72px/s);
   assert.match(style, /\.side-nav a\s*\{[^}]*min-height:\s*58px/s);
+  assert.match(style, /\.side-nav a\.active\s*\{[^}]*background:\s*rgba\(255,255,255,\.13\)/s);
+  assert.match(style, /\.side-nav a\.active::after\s*\{[^}]*opacity:\s*1[^}]*scaleX\(1\)/s);
+  assert.match(style, /\.save-actions button\s*\{[^}]*min-width:\s*96px[^}]*white-space:\s*nowrap/s);
+  assert.match(style, /\.back-to-top\s*\{[^}]*position:\s*fixed[^}]*min-height:\s*52px[^}]*box-shadow:/s);
   assert.match(style, /\.planner-section, \.collection-section, \.roadmap-section, \.rules-section\s*\{[^}]*background:\s*var\(--paper\)/s);
   assert.doesNotMatch(style, /\.planner-section, \.collection-section, \.roadmap-section, \.rules-section\s*\{[^}]*background:\s*linear-gradient/s);
   assert.match(style, /\.pet-info h3\s*\{[^}]*font-size:\s*16px/s);

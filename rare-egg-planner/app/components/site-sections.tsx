@@ -6,7 +6,7 @@ export function SiteNavigation() {
   return (
     <>
       <nav className="side-nav" aria-label="功能模块快速定位">
-        <a href="#top"><span>01</span><b>概览</b></a>
+        <a className="active" aria-current="location" href="#top"><span>01</span><b>概览</b></a>
         <a href="#plan"><span>02</span><b>摆窝</b></a>
         <a href="#route"><span>03</span><b>路线</b></a>
         <a href="#collection"><span>04</span><b>图鉴</b></a>
@@ -59,5 +59,5 @@ export function RulesSection() {
 }
 
 export function SiteFooter() {
-  return <footer><span>✦ 珍稀孵蛋规划台</span><p>异色、炫彩与组合形态独立保存于本机</p><a href="#top">回到顶部 ↑</a></footer>;
+  return <footer><span>✦ 珍稀孵蛋规划台</span><p>异色、炫彩与组合形态独立保存于本机</p><a className="back-to-top" href="#top">回到顶部</a></footer>;
 }

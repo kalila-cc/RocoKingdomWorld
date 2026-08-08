@@ -2,10 +2,13 @@
 .collection-heading { align-items: center; }
 .collection-heading .eyebrow { color: var(--coral); }
 .collection-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
-.save-actions { display: flex; align-items: center; gap: 8px; }
-.save-actions button { min-height: 38px; border: 1px solid var(--line); background: white; padding: 9px 15px; border-radius: 10px; font-size: 12px; font-weight: 750; cursor: pointer; }
-.save-actions button:hover { border-color: var(--purple); }
-.save-actions .danger-link { border-color: transparent; background: transparent; color: #a65a5e; }
+.save-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
+.save-actions button { min-width: 96px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); background: white; padding: 10px 18px; border-radius: 12px; color: var(--purple-dark); font-size: 12px; font-weight: 780; line-height: 1; white-space: nowrap; cursor: pointer; box-shadow: 0 8px 18px rgba(47,35,89,.08), inset 0 1px 0 rgba(255,255,255,.9); transition: transform .18s ease, border-color .18s ease, box-shadow .22s ease, background .18s ease; }
+.save-actions button:hover { border-color: #bdb2df; background: #fffefa; transform: translateY(-2px); box-shadow: 0 12px 22px rgba(47,35,89,.12), inset 0 1px 0 rgba(255,255,255,.95); }
+.save-actions button:active { transform: translateY(0) scale(.98); }
+.save-actions button:focus-visible { outline: 3px solid rgba(88,67,220,.2); outline-offset: 2px; }
+.save-actions .danger-link { min-width: 64px; border-color: transparent; background: transparent; color: #a65a5e; box-shadow: none; }
+.save-actions .danger-link:hover { border-color: #ead3d4; background: #fff7f7; box-shadow: 0 8px 18px rgba(119,55,60,.07); }
 .catalog-stats { display: grid; grid-template-columns: repeat(4, 125px) 1fr; align-items: end; gap: 12px; padding: 20px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .catalog-stats div { display: flex; align-items: baseline; gap: 8px; }
 .catalog-stats strong { font: 800 27px/1 ui-monospace, monospace; }

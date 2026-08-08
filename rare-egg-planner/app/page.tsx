@@ -6,6 +6,7 @@ import { PlannerSection } from "./components/planner-section";
 import { RoadmapSection } from "./components/roadmap-section";
 import { HeroSection, RulesSection, SiteFooter, SiteNavigation } from "./components/site-sections";
 import { PETS } from "./data";
+import { useActiveSectionNavigation } from "./hooks/use-active-section-navigation";
 import { usePlannerProgress } from "./hooks/use-planner-progress";
 import { AUTO_PRIORITY, availableMotherVariants, createPlanner, isBreedable, isEggTarget, ownsKind, petKey } from "./planner-core";
 
@@ -13,6 +14,7 @@ const PLANNER = createPlanner(PETS);
 const SEASON_KEYS = Array.from(new Set(PETS.map((pet) => pet.season.match(/^S\d+/)?.[0]).filter((value): value is string => Boolean(value)))).sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
 
 export default function Home() {
+  useActiveSectionNavigation();
   const { owned, nestCount, setNestCount, focus, setFocus, saveStatus, toast, toggleOwned, exportProgress, importProgress, clearProgress } = usePlannerProgress();
   const [salt, setSalt] = useState(0);
   const plan = useMemo(() => PLANNER.makeAutoPlan(owned, nestCount, focus, salt), [owned, nestCount, focus, salt]);

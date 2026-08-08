@@ -74,6 +74,7 @@
   .rule-grid article { min-height: 180px; border-right: 0; border-bottom: 1px solid rgba(42,35,64,.25); }
   .rule-grid h3 { margin-top: 30px; }
   footer { min-height: 140px; flex-wrap: wrap; padding: 44px 16px 28px; gap: 12px; }
+  .back-to-top { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); min-width: 124px; min-height: 48px; padding: 0 17px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
