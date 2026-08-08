@@ -7,8 +7,9 @@
 .save-actions button:hover { border-color: #bdb2df; background: #fffefa; transform: translateY(-2px); box-shadow: 0 12px 22px rgba(47,35,89,.12), inset 0 1px 0 rgba(255,255,255,.95); }
 .save-actions button:active { transform: translateY(0) scale(.98); }
 .save-actions button:focus-visible { outline: 3px solid rgba(88,67,220,.2); outline-offset: 2px; }
-.save-actions .danger-link { min-width: 64px; border-color: transparent; background: transparent; color: #a65a5e; box-shadow: none; }
-.save-actions .danger-link:hover { border-color: #ead3d4; background: #fff7f7; box-shadow: 0 8px 18px rgba(119,55,60,.07); }
+.save-actions .danger-action { min-width: 96px; border-color: #d95b65; background: #fff3f4; color: #b32634; box-shadow: 0 8px 18px rgba(155,45,55,.1), inset 0 1px 0 rgba(255,255,255,.9); }
+.save-actions .danger-action:hover { border-color: #bd3440; background: #c83b47; color: #fff; box-shadow: 0 12px 22px rgba(155,45,55,.2), inset 0 1px 0 rgba(255,255,255,.16); }
+.save-actions .danger-action:focus-visible { outline-color: rgba(200,59,71,.28); }
 .catalog-stats { display: grid; grid-template-columns: repeat(4, 125px) 1fr; align-items: end; gap: 12px; padding: 20px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .catalog-stats div { display: flex; align-items: baseline; gap: 8px; }
 .catalog-stats strong { font: 800 27px/1 ui-monospace, monospace; }

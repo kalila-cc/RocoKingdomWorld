@@ -1,4 +1,5 @@
 import { type CSSProperties } from "react";
+import Image from "next/image";
 import { PETS } from "../data";
 import {
   TARGET_LABEL,
@@ -34,7 +35,7 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
   const motherKeys = Array.from(new Set(plan.edges.map((edge) => petKey(edge.mother.pet))));
   return (
     <section className="planner-section" id="plan">
-      <div className="section-heading solo"><div><p className="eyebrow">SMART NEST LAYOUT</p><h2>此刻最值得摆的窝</h2></div></div>
+      <div className="section-heading solo"><div><p className="eyebrow">SMART NEST LAYOUT</p><h2>当前推荐摆窝方案</h2></div></div>
       <div className="planner-grid">
         <article className="nest-card">
           <div className="nest-toolbar">
@@ -54,11 +55,11 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
           </div>
 
           <div className="plan-options-bar">
-            <div className="plan-options-label"><strong>可选方案</strong><small>{planOptions.length > 1 ? `共 ${planOptions.length} 组，可直接切换` : "当前仅有一组有效方案"}</small></div>
+            <div className="plan-options-label"><strong>可选方案</strong><small>{planOptions.length > 1 ? `共 ${planOptions.length} 个方案，可直接切换` : "当前仅生成 1 个可用方案"}</small></div>
             <div className="plan-option-switch" role="group" aria-label="摆窝可选方案">
               {planOptions.map((option, index) => (
                 <button className={activePlanIndex === index ? "active" : ""} type="button" key={index} aria-pressed={activePlanIndex === index} onClick={() => onPlanChange(index)}>
-                  <span>方案 {index + 1}</span><small>{option.recommendation ? `${option.recommendation}%` : "待登记"}</small>
+                  <span>方案 {index + 1}</span><small>{option.recommendation ? `${option.recommendation}%` : "暂无"}</small>
                 </button>
               ))}
             </div>
@@ -77,7 +78,14 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
               const pos = slotPoint(slot);
               return (
                 <div key={`${slot.role}-${petKey(slot.pet)}-${slot.variant}`} className={`nest-slot ${slot.role} variant-${slot.variant}`} style={{ "--left": `${pos.left}%`, "--top": `${pos.top}%` } as CSSProperties} tabIndex={0} aria-label={`${petLabel(slot.pet)}，${VARIANT_LABEL[slot.variant]}${slot.role === "father" ? "父本" : "母本"}，蛋组：${slot.pet.groups.length ? slot.pet.groups.join("、") : "无可用蛋组"}`}>
-                  <div className="nest-shell"><PetImage pet={slot.pet} /></div>
+                  <div className="nest-shell">
+                    <PetImage pet={slot.pet} />
+                    {slot.variant !== "normal" && (
+                      <span className={`nest-variant-mark mark-${slot.variant}`} aria-label={VARIANT_LABEL[slot.variant]} title={VARIANT_LABEL[slot.variant]}>
+                        <Image src={`/assets/traits/mark-${slot.variant}.png`} alt="" width={30} height={30} unoptimized />
+                      </span>
+                    )}
+                  </div>
                   <span className="gender-pin">{slot.role === "father" ? "♂" : "♀"}</span>
                   <strong title={petLabel(slot.pet)}>{petLabel(slot.pet)}</strong>
                   <small>{VARIANT_LABEL[slot.variant]}{slot.role === "father" ? "父本" : "母本"}</small>
@@ -88,25 +96,27 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
             {!plan.slots.length && (
               <div className="map-empty-state">
                 <span className="empty-symbol">♂</span>
-                <h3>{maleCount ? "当前赛季暂无可孵目标" : "先登记可传递珍稀特征的父本"}</h3>
-                <p>{maleCount ? "切换目标赛季或检查已有记录，系统会继续按异色炫彩、异色、炫彩自动降级寻找方案。" : "可登记异色炫彩父本；也可用异色父本搭配目标炫彩母本，反向亦可。"}</p>
-                <a href="#catalog" onClick={(event) => { event.preventDefault(); onOpenCatalog(); }}>去登记图鉴 →</a>
+                <h3>{maleCount ? "当前赛季暂无可推荐的孵蛋目标" : "先登记一只可繁育的珍稀父本"}</h3>
+                <p>{maleCount ? "可以切换目标赛季或检查图鉴登记；系统会依次尝试异色炫彩、异色和炫彩目标。" : "登记一只可繁育的异色、炫彩或异色炫彩父本后，系统会自动寻找相容母本。"}</p>
+                <a href="#catalog" onClick={(event) => { event.preventDefault(); onOpenCatalog(); }}>前往图鉴登记 →</a>
               </div>
             )}
-            <div className="distance-key"><span /> 实线代表同蛋组且横、竖或斜角紧邻</div>
+            <div className="distance-key"><span /> 连线表示两只精灵同蛋组，且窝位横、竖或斜向相邻</div>
           </div>
 
         </article>
 
         <aside className="recommendation-panel">
-          <div className="panel-title"><span>本轮蛋单</span><small>{plan.targetTier === "season-limited" ? "赛季限时目标" : plan.targetTier === "permanent" ? "常驻目标低优补位" : "蛋种跟随母本"}</small></div>
+          <div className="panel-title"><span>本轮孵蛋目标</span><small>{plan.targetTier === "season-limited" ? "赛季限时优先" : plan.targetTier === "permanent" ? "补充常驻目标" : "后代种类由母本决定"}</small></div>
           <div className="egg-list">
             {motherKeys.map((key, index) => {
               const mother = PET_MAP.get(key)!;
-              const fathers = Array.from(new Set(plan.edges.filter((edge) => petKey(edge.mother.pet) === key).map((edge) => petKey(edge.father.pet))));
-              return <div className="egg-item" key={key}><span className="egg-number">{String(index + 1).padStart(2, "0")}</span><PetImage pet={mother} /><div><strong>{petLabel(mother)}</strong><small>{commonGroup(PET_MAP.get(fathers[0])!, mother)} · 接入 {fathers.length} 只父本</small></div></div>;
+              const edges = plan.edges.filter((edge) => petKey(edge.mother.pet) === key);
+              const fathers = Array.from(new Set(edges.map((edge) => petKey(edge.father.pet))));
+              const motherVariant = edges[0].mother.variant;
+              return <div className="egg-item" key={key}><span className="egg-number">{String(index + 1).padStart(2, "0")}</span><PetImage pet={mother} /><div><strong>{petLabel(mother)}</strong><small>{VARIANT_LABEL[motherVariant]}母本 · {commonGroup(PET_MAP.get(fathers[0])!, mother)} · 可与 {fathers.length} 只父本配对</small></div></div>;
             })}
-            {!plan.edges.length && <p className="panel-empty">登记图鉴后，具体蛋单会出现在这里。</p>}
+            {!plan.edges.length && <p className="panel-empty">完成图鉴登记后，推荐目标会显示在这里。</p>}
           </div>
         </aside>
       </div>

@@ -2,7 +2,7 @@
 window.ROCO_PLANNER = (() => {
   const exports = {};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TARGET_LABEL = exports.VARIANT_LABEL = exports.NEST_GRID_STEP = exports.AUTO_PRIORITY = exports.FLAG = exports.OWN = void 0;
+exports.TARGET_LABEL = exports.VARIANT_LABEL = exports.EXACT_PARENT_LIMIT = exports.NEST_GRID_STEP = exports.AUTO_PRIORITY = exports.FLAG = exports.OWN = void 0;
 exports.petKey = petKey;
 exports.petLabel = petLabel;
 exports.isBattlePassPet = isBattlePassPet;
@@ -57,6 +57,7 @@ exports.FLAG = {
 };
 exports.AUTO_PRIORITY = ["combo", "shiny", "colorful"];
 exports.NEST_GRID_STEP = 2;
+exports.EXACT_PARENT_LIMIT = 5;
 exports.VARIANT_LABEL = {
     normal: "普通",
     shiny: "异色",
@@ -170,8 +171,87 @@ function layoutPositions(count) {
         return Array.from({ length: items }, (_, index) => ({ x: start + index * 2, y: yValues[rowIndex] }));
     });
 }
+const exactPlacementPatternCache = new Map();
+function exactPlacementPatterns(totalCount, fatherCount) {
+    const cacheKey = `${totalCount}:${fatherCount}`;
+    const cached = exactPlacementPatternCache.get(cacheKey);
+    if (cached)
+        return cached;
+    const positions = layoutPositions(totalCount);
+    const adjacent = Array.from({ length: totalCount }, () => Array(totalCount).fill(false));
+    for (let first = 0; first < totalCount; first += 1) {
+        for (let second = first + 1; second < totalCount; second += 1) {
+            adjacent[first][second] = adjacent[second][first] = Math.max(Math.abs(positions[first].x - positions[second].x), Math.abs(positions[first].y - positions[second].y)) <= exports.NEST_GRID_STEP;
+        }
+    }
+    const patterns = [];
+    const seen = new Set();
+    const usedPositions = Array(totalCount).fill(false);
+    const fatherPositionIndexes = Array(fatherCount).fill(-1);
+    const visit = (fatherIndex) => {
+        if (fatherIndex < fatherCount) {
+            for (let positionIndex = 0; positionIndex < totalCount; positionIndex += 1) {
+                if (usedPositions[positionIndex])
+                    continue;
+                usedPositions[positionIndex] = true;
+                fatherPositionIndexes[fatherIndex] = positionIndex;
+                visit(fatherIndex + 1);
+                usedPositions[positionIndex] = false;
+            }
+            return;
+        }
+        const motherPositions = Array.from({ length: totalCount }, (_, positionIndex) => positionIndex)
+            .filter((positionIndex) => !usedPositions[positionIndex])
+            .map((positionIndex) => {
+            let neighborMask = 0;
+            fatherPositionIndexes.forEach((fatherPositionIndex, index) => {
+                if (adjacent[positionIndex][fatherPositionIndex])
+                    neighborMask |= 1 << index;
+            });
+            return { positionIndex, neighborMask };
+        })
+            .sort((a, b) => a.neighborMask - b.neighborMask || a.positionIndex - b.positionIndex);
+        const signature = motherPositions.map((item) => item.neighborMask).join(",");
+        if (seen.has(signature))
+            return;
+        seen.add(signature);
+        patterns.push({
+            fatherPositionIndexes: [...fatherPositionIndexes],
+            motherPositionIndexes: motherPositions.map((item) => item.positionIndex),
+            neighborMasks: motherPositions.map((item) => item.neighborMask),
+        });
+    };
+    visit(0);
+    exactPlacementPatternCache.set(cacheKey, patterns);
+    return patterns;
+}
+function countBits(value) {
+    let count = 0;
+    while (value) {
+        value &= value - 1;
+        count += 1;
+    }
+    return count;
+}
+function forEachCombination(items, count, visit) {
+    const chosen = [];
+    const choose = (start) => {
+        if (chosen.length === count) {
+            visit([...chosen]);
+            return;
+        }
+        const remaining = count - chosen.length;
+        for (let index = start; index <= items.length - remaining; index += 1) {
+            chosen.push(items[index]);
+            choose(index + 1);
+            chosen.pop();
+        }
+    };
+    choose(0);
+}
 function createPlanner(pets) {
     const petMap = new Map(pets.map((pet) => [petKey(pet), pet]));
+    const exactPlanCache = new Map();
     function sameEggGroup(father, mother) {
         return father.maleTargets.includes(petKey(mother)) || Boolean(commonGroup(father, mother) !== "同蛋组" && isBreedable(father) && isBreedable(mother));
     }
@@ -198,68 +278,90 @@ function createPlanner(pets) {
         });
         return parents;
     }
-    function layoutScore(slots) {
-        let edges = 0;
-        const covered = new Set();
-        for (let i = 0; i < slots.length; i += 1) {
-            for (let j = i + 1; j < slots.length; j += 1) {
-                const a = slots[i];
-                const b = slots[j];
-                if (a.role === b.role)
-                    continue;
-                const father = a.role === "father" ? a : b;
-                const mother = a.role === "mother" ? a : b;
-                if (nestsAreAdjacent(a, b) && canPair(father, mother)) {
-                    edges += 1;
-                    covered.add(petKey(mother.pet));
+    function optimizeLayout(roster, salt) {
+        const positions = layoutPositions(roster.length);
+        const itemIndexes = roster.map((_, index) => index);
+        const adjacentPositionPairs = [];
+        const pairable = Array.from({ length: roster.length }, () => Array(roster.length).fill(false));
+        for (let first = 0; first < positions.length; first += 1) {
+            for (let second = first + 1; second < positions.length; second += 1) {
+                if (Math.max(Math.abs(positions[first].x - positions[second].x), Math.abs(positions[first].y - positions[second].y)) <= exports.NEST_GRID_STEP) {
+                    adjacentPositionPairs.push([first, second]);
                 }
             }
         }
-        return covered.size * 100 + edges * 8;
-    }
-    function optimizeLayout(roster, salt) {
-        const positions = layoutPositions(roster.length);
+        for (let first = 0; first < roster.length; first += 1) {
+            for (let second = first + 1; second < roster.length; second += 1) {
+                if (roster[first].role === roster[second].role)
+                    continue;
+                const father = roster[first].role === "father" ? roster[first] : roster[second];
+                const mother = roster[first].role === "mother" ? roster[first] : roster[second];
+                pairable[first][second] = pairable[second][first] = canPair(father, mother);
+            }
+        }
+        const scoreArrangement = (arrangement) => {
+            let coveredMotherMask = 0;
+            let edges = 0;
+            adjacentPositionPairs.forEach(([firstPosition, secondPosition]) => {
+                const firstItem = arrangement[firstPosition];
+                const secondItem = arrangement[secondPosition];
+                if (!pairable[firstItem][secondItem])
+                    return;
+                edges += 1;
+                const motherIndex = roster[firstItem].role === "mother" ? firstItem : secondItem;
+                coveredMotherMask |= 1 << motherIndex;
+            });
+            let coveredMothers = 0;
+            while (coveredMotherMask) {
+                coveredMotherMask &= coveredMotherMask - 1;
+                coveredMothers += 1;
+            }
+            return coveredMothers * 100 + edges * 8;
+        };
         const starts = [
-            roster,
-            ...Array.from({ length: Math.min(11, Math.max(3, roster.length)) }, (_, restart) => [...roster].sort((a, b) => {
-                const score = (item) => hashText(`${petKey(item.pet)}:${item.role}:${item.variant}:${salt}:${restart}`);
+            itemIndexes,
+            ...Array.from({ length: Math.min(11, Math.max(3, roster.length)) }, (_, restart) => [...itemIndexes].sort((a, b) => {
+                const score = (itemIndex) => {
+                    const item = roster[itemIndex];
+                    return hashText(`${petKey(item.pet)}:${item.role}:${item.variant}:${salt}:${restart}`);
+                };
                 return score(a) - score(b);
             })),
         ];
-        let bestSlots = [];
+        let bestArrangement = [];
         let globalBestScore = -1;
         starts.forEach((start) => {
-            let slots = start.map((item, index) => ({ ...item, x: positions[index].x, y: positions[index].y }));
-            let bestScore = layoutScore(slots);
+            const arrangement = [...start];
+            let bestScore = scoreArrangement(arrangement);
             while (true) {
-                let nextSlots = null;
+                let nextSwap = null;
                 let nextScore = bestScore;
-                for (let i = 0; i < slots.length; i += 1) {
-                    for (let j = i + 1; j < slots.length; j += 1) {
-                        const candidate = slots.map((slot) => ({ ...slot }));
-                        const point = { x: candidate[i].x, y: candidate[i].y };
-                        candidate[i].x = candidate[j].x;
-                        candidate[i].y = candidate[j].y;
-                        candidate[j].x = point.x;
-                        candidate[j].y = point.y;
-                        const score = layoutScore(candidate);
+                for (let first = 0; first < arrangement.length; first += 1) {
+                    for (let second = first + 1; second < arrangement.length; second += 1) {
+                        [arrangement[first], arrangement[second]] = [arrangement[second], arrangement[first]];
+                        const score = scoreArrangement(arrangement);
+                        [arrangement[first], arrangement[second]] = [arrangement[second], arrangement[first]];
                         if (score > nextScore) {
-                            nextSlots = candidate;
+                            nextSwap = [first, second];
                             nextScore = score;
                         }
                     }
                 }
-                if (!nextSlots)
+                if (!nextSwap)
                     break;
-                slots = nextSlots;
+                [arrangement[nextSwap[0]], arrangement[nextSwap[1]]] = [arrangement[nextSwap[1]], arrangement[nextSwap[0]]];
                 bestScore = nextScore;
             }
             if (bestScore > globalBestScore) {
-                bestSlots = slots;
+                bestArrangement = [...arrangement];
                 globalBestScore = bestScore;
             }
         });
-        return bestSlots;
+        return bestArrangement.map((itemIndex, positionIndex) => ({
+            ...roster[itemIndex],
+            x: positions[positionIndex].x,
+            y: positions[positionIndex].y,
+        }));
     }
     function buildEdges(slots) {
         const edges = [];
@@ -299,12 +401,271 @@ function createPlanner(pets) {
         }
         return chosen;
     }
-    function makePlan(owned, nestCount, focus, kind, salt, objective = kind, targetTier = "all") {
+    function rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier) {
+        const ranked = targets
+            .map((pet) => {
+            const variants = availableMotherVariants(owned[petKey(pet)]);
+            const scoredVariants = variants.map((variant) => {
+                let profile = 0;
+                let traitValue = 0;
+                chosenMales.forEach((father, fatherIndex) => {
+                    if (!sameEggGroup(father.pet, pet) || !canProduce(kind, father.variant, variant))
+                        return;
+                    profile |= 1 << fatherIndex;
+                    traitValue += Math.max(0, motherVariantValue(kind, father.variant, variant));
+                });
+                return { variant, profile, compatible: countBits(profile), traitValue };
+            }).sort((a, b) => b.compatible - a.compatible || b.traitValue - a.traitValue);
+            const bestVariant = scoredVariants[0];
+            const futureReach = pet.maleTargets.filter((name) => {
+                const future = petMap.get(name);
+                return future ? isMissingObjective(future) && isEggTarget(future) && isCurrentTier(future) : false;
+            }).length;
+            return {
+                pet,
+                variant: bestVariant.variant,
+                compatible: bestVariant.compatible,
+                traitValue: bestVariant.traitValue,
+                futureReach,
+                tieBreaker: hashText(`${petKey(pet)}:${salt}`) % 97,
+                profile: bestVariant.profile,
+            };
+        })
+            .filter((item) => item.compatible > 0)
+            .sort((a, b) => b.compatible - a.compatible
+            || b.traitValue - a.traitValue
+            || b.futureReach - a.futureReach
+            || b.tieBreaker - a.tieBreaker);
+        return ranked;
+    }
+    function assignmentWeights(profile, pattern) {
+        return pattern.neighborMasks.map((neighborMask) => {
+            const fatherMask = profile & neighborMask;
+            const edges = countBits(fatherMask);
+            return { fatherMask, value: Number(edges > 0) * 1000 + edges };
+        });
+    }
+    function exactAssignmentScore(pattern, profileCounts, fatherCount) {
+        const motherCount = pattern.motherPositionIndexes.length;
+        const fullMotherMask = (1 << motherCount) - 1;
+        const fatherStates = 1 << fatherCount;
+        const fullFatherMask = fatherStates - 1;
+        let scores = new Int16Array((1 << motherCount) * fatherStates);
+        scores.fill(-1);
+        scores[0] = 0;
+        profileCounts.forEach((rawCount, profile) => {
+            const copies = Math.min(rawCount, motherCount);
+            const weights = assignmentWeights(profile, pattern);
+            for (let copy = 0; copy < copies; copy += 1) {
+                const next = scores.slice();
+                for (let occupied = 0; occupied <= fullMotherMask; occupied += 1) {
+                    for (let connectedFathers = 0; connectedFathers < fatherStates; connectedFathers += 1) {
+                        const stateIndex = occupied * fatherStates + connectedFathers;
+                        const current = scores[stateIndex];
+                        if (current < 0)
+                            continue;
+                        for (let slotIndex = 0; slotIndex < motherCount; slotIndex += 1) {
+                            const slotBit = 1 << slotIndex;
+                            if (occupied & slotBit)
+                                continue;
+                            const weight = weights[slotIndex];
+                            const nextMotherMask = occupied | slotBit;
+                            const nextFatherMask = connectedFathers | weight.fatherMask;
+                            const nextIndex = nextMotherMask * fatherStates + nextFatherMask;
+                            const nextScore = current + weight.value;
+                            if (nextScore > next[nextIndex])
+                                next[nextIndex] = nextScore;
+                        }
+                    }
+                }
+                scores = next;
+            }
+        });
+        let best = { rank: -1, fatherMask: 0 };
+        for (let fatherMask = 0; fatherMask < fatherStates; fatherMask += 1) {
+            const score = scores[fullMotherMask * fatherStates + fatherMask];
+            if (score < 0)
+                continue;
+            const pairedMothers = Math.floor(score / 1000);
+            const edges = score % 1000;
+            const connectedSlots = pairedMothers + countBits(fatherMask);
+            const allNestsConnected = pairedMothers === motherCount && fatherMask === fullFatherMask;
+            const rank = Number(allNestsConnected) * 1000000000 + pairedMothers * 1000000 + connectedSlots * 1000 + edges;
+            if (rank > best.rank)
+                best = { rank, fatherMask };
+        }
+        return best;
+    }
+    function reconstructExactProfiles(pattern, profileCounts, fatherCount, targetFatherMask) {
+        const motherCount = pattern.motherPositionIndexes.length;
+        const fullMotherMask = (1 << motherCount) - 1;
+        const fatherStates = 1 << fatherCount;
+        const profiles = [...profileCounts.entries()].flatMap(([profile, count]) => Array(Math.min(count, motherCount)).fill(profile));
+        const layers = [new Int16Array((1 << motherCount) * fatherStates)];
+        layers[0].fill(-1);
+        layers[0][0] = 0;
+        profiles.forEach((profile, profileIndex) => {
+            const previous = layers[profileIndex];
+            const next = previous.slice();
+            const weights = assignmentWeights(profile, pattern);
+            for (let occupied = 0; occupied < fullMotherMask; occupied += 1) {
+                for (let connectedFathers = 0; connectedFathers < fatherStates; connectedFathers += 1) {
+                    const stateIndex = occupied * fatherStates + connectedFathers;
+                    const current = previous[stateIndex];
+                    if (current < 0)
+                        continue;
+                    for (let slotIndex = 0; slotIndex < motherCount; slotIndex += 1) {
+                        const slotBit = 1 << slotIndex;
+                        if (occupied & slotBit)
+                            continue;
+                        const weight = weights[slotIndex];
+                        const nextMotherMask = occupied | slotBit;
+                        const nextFatherMask = connectedFathers | weight.fatherMask;
+                        const nextIndex = nextMotherMask * fatherStates + nextFatherMask;
+                        const nextScore = current + weight.value;
+                        if (nextScore > next[nextIndex])
+                            next[nextIndex] = nextScore;
+                    }
+                }
+            }
+            layers.push(next);
+        });
+        const assignment = Array(motherCount).fill(0);
+        let occupied = fullMotherMask;
+        let connectedFathers = targetFatherMask;
+        for (let profileIndex = profiles.length; profileIndex > 0 && occupied; profileIndex -= 1) {
+            const currentLayer = layers[profileIndex];
+            const previousLayer = layers[profileIndex - 1];
+            const currentIndex = occupied * fatherStates + connectedFathers;
+            if (currentLayer[currentIndex] === previousLayer[currentIndex])
+                continue;
+            const profile = profiles[profileIndex - 1];
+            const weights = assignmentWeights(profile, pattern);
+            let found = false;
+            for (let slotIndex = 0; slotIndex < motherCount; slotIndex += 1) {
+                const slotBit = 1 << slotIndex;
+                if (!(occupied & slotBit))
+                    continue;
+                const previousMotherMask = occupied ^ slotBit;
+                const weight = weights[slotIndex];
+                for (let previousFatherMask = 0; previousFatherMask < fatherStates; previousFatherMask += 1) {
+                    if ((previousFatherMask | weight.fatherMask) !== connectedFathers)
+                        continue;
+                    const previousIndex = previousMotherMask * fatherStates + previousFatherMask;
+                    const previousScore = previousLayer[previousIndex];
+                    if (previousScore < 0 || previousScore + weight.value !== currentLayer[currentIndex])
+                        continue;
+                    assignment[slotIndex] = profile;
+                    occupied = previousMotherMask;
+                    connectedFathers = previousFatherMask;
+                    found = true;
+                    break;
+                }
+                if (found)
+                    break;
+            }
+        }
+        return occupied === 0 && connectedFathers === 0 && assignment.every((profile) => profile > 0) ? assignment : null;
+    }
+    function makeExactCandidate(males, targets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier) {
+        let best = null;
+        let bestTieScore = -1;
+        const maxMales = Math.min(males.length, nestCount - 1, exports.EXACT_PARENT_LIMIT);
+        for (let maleCount = 1; maleCount <= maxMales; maleCount += 1) {
+            forEachCombination(males, maleCount, (chosenMales) => {
+                const rankedTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier);
+                const motherCount = Math.min(nestCount - maleCount, rankedTargets.length);
+                if (!motherCount)
+                    return;
+                const candidatesByProfile = new Map();
+                rankedTargets.forEach((item) => {
+                    const candidates = candidatesByProfile.get(item.profile) || [];
+                    if (candidates.length < motherCount)
+                        candidates.push(item);
+                    candidatesByProfile.set(item.profile, candidates);
+                });
+                const profileCounts = new Map([...candidatesByProfile].map(([profile, candidates]) => [profile, candidates.length]));
+                const totalCount = maleCount + motherCount;
+                const patterns = exactPlacementPatterns(totalCount, maleCount);
+                let selectedPattern = null;
+                let selectedScore = -1;
+                let selectedFatherMask = 0;
+                patterns.forEach((pattern) => {
+                    const result = exactAssignmentScore(pattern, profileCounts, maleCount);
+                    if (result.rank > selectedScore) {
+                        selectedScore = result.rank;
+                        selectedFatherMask = result.fatherMask;
+                        selectedPattern = pattern;
+                    }
+                });
+                if (!selectedPattern)
+                    return;
+                const pattern = selectedPattern;
+                const assignedProfiles = reconstructExactProfiles(pattern, profileCounts, maleCount, selectedFatherMask);
+                if (!assignedProfiles)
+                    return;
+                const profileOffsets = new Map();
+                const assignment = assignedProfiles.map((profile) => {
+                    const offset = profileOffsets.get(profile) || 0;
+                    profileOffsets.set(profile, offset + 1);
+                    return candidatesByProfile.get(profile)[offset];
+                });
+                const positions = layoutPositions(totalCount);
+                const slots = [
+                    ...chosenMales.map((father, fatherIndex) => ({
+                        pet: father.pet,
+                        variant: father.variant,
+                        targetKind: kind,
+                        role: "father",
+                        x: positions[pattern.fatherPositionIndexes[fatherIndex]].x,
+                        y: positions[pattern.fatherPositionIndexes[fatherIndex]].y,
+                    })),
+                    ...assignment.map((mother, motherIndex) => ({
+                        pet: mother.pet,
+                        variant: mother.variant,
+                        targetKind: kind,
+                        role: "mother",
+                        x: positions[pattern.motherPositionIndexes[motherIndex]].x,
+                        y: positions[pattern.motherPositionIndexes[motherIndex]].y,
+                    })),
+                ];
+                const edges = buildEdges(slots);
+                const pairedMothers = new Set(edges.map((edge) => petKey(edge.mother.pet))).size;
+                const connectedSlots = new Set(edges.flatMap((edge) => [edge.father, edge.mother])).size;
+                const fillsRequestedNests = slots.length === nestCount;
+                const allNestsConnected = fillsRequestedNests && connectedSlots === slots.length;
+                const candidate = { slots, edges, fillsRequestedNests, allNestsConnected, pairedMothers, connectedSlots, maleCount };
+                const tied = best && !prefersCandidate(candidate, best) && !prefersCandidate(best, candidate);
+                if (!best || prefersCandidate(candidate, best) || (tied && selectedScore > bestTieScore)) {
+                    best = candidate;
+                    bestTieScore = selectedScore;
+                }
+            });
+            const nextMaleCount = maleCount + 1;
+            const nextMaximumMothers = nestCount - nextMaleCount;
+            const currentBest = best;
+            if (currentBest?.fillsRequestedNests && currentBest.allNestsConnected && currentBest.pairedMothers > nextMaximumMothers)
+                break;
+        }
+        return best;
+    }
+    function effectiveMaleParents(owned, kind, targets) {
+        return maleParents(owned, kind).filter((father) => targets.some((target) => sameEggGroup(father.pet, target) && Boolean(bestMotherVariant(owned, target, father, kind))));
+    }
+    function canUseExactSearch(owned, focus, kind, objective, targetTier) {
+        const targets = pets.filter((pet) => !ownsKind(owned[petKey(pet)], objective)
+            && isEggTarget(pet)
+            && tierMatches(pet, objective, targetTier)
+            && seasonMatches(pet, focus));
+        const parentCount = effectiveMaleParents(owned, kind, targets).length;
+        return parentCount > 0 && parentCount <= exports.EXACT_PARENT_LIMIT;
+    }
+    function makePlan(owned, nestCount, focus, kind, salt, objective = kind, targetTier = "all", exactSearch = false) {
         const isMissingObjective = (pet) => !ownsKind(owned[petKey(pet)], objective);
         const isCurrentTier = (pet) => tierMatches(pet, objective, targetTier);
         const targets = pets.filter((pet) => isMissingObjective(pet) && isEggTarget(pet) && isCurrentTier(pet) && seasonMatches(pet, focus));
         const allMissing = pets.filter((pet) => isMissingObjective(pet) && isEggTarget(pet) && isCurrentTier(pet));
-        const males = maleParents(owned, kind);
+        const males = effectiveMaleParents(owned, kind, targets);
         const direct = new Set();
         males.forEach((father) => father.pet.maleTargets.forEach((name) => {
             const target = petMap.get(name);
@@ -314,50 +675,55 @@ function createPlanner(pets) {
         if (!males.length || !targets.length) {
             return { objective, targetTier, slots: [], edges: [], pairedMothers: 0, targetCount: targets.length, directCount: direct.size, uncovered: allMissing.length };
         }
-        let best = null;
-        const maxMales = Math.min(males.length, nestCount - 1, 5);
-        for (let maleCount = 1; maleCount <= maxMales; maleCount += 1) {
-            const chosenMales = chooseMales(males, targets, owned, kind, maleCount, salt);
-            const motherCount = nestCount - chosenMales.length;
-            const chosenTargets = targets
-                .map((pet) => {
-                const variants = availableMotherVariants(owned[petKey(pet)]);
-                const scoredVariants = variants.map((variant) => ({
-                    variant,
-                    compatible: chosenMales.filter((father) => sameEggGroup(father.pet, pet) && canProduce(kind, father.variant, variant)).length,
-                    traitValue: chosenMales.reduce((sum, father) => sameEggGroup(father.pet, pet) ? sum + Math.max(0, motherVariantValue(kind, father.variant, variant)) : sum, 0),
-                })).sort((a, b) => b.compatible - a.compatible || b.traitValue - a.traitValue);
-                const bestVariant = scoredVariants[0];
-                const futureReach = pet.maleTargets.filter((name) => {
-                    const future = petMap.get(name);
-                    return future ? isMissingObjective(future) && isEggTarget(future) && isCurrentTier(future) : false;
-                }).length;
-                return { pet, variant: bestVariant.variant, compatible: bestVariant.compatible, traitValue: bestVariant.traitValue, futureReach, tieBreaker: hashText(`${petKey(pet)}:${salt}`) % 97 };
-            })
-                .filter((item) => item.compatible > 0)
-                .sort((a, b) => b.compatible - a.compatible
-                || b.traitValue - a.traitValue
-                || b.futureReach - a.futureReach
-                || b.tieBreaker - a.tieBreaker)
-                .slice(0, motherCount);
-            const roster = [
-                ...chosenMales.map((parent) => ({ pet: parent.pet, variant: parent.variant, targetKind: kind, role: "father" })),
-                ...chosenTargets.map((item) => ({ pet: item.pet, variant: item.variant, targetKind: kind, role: "mother" })),
-            ];
-            const slots = optimizeLayout(roster, salt);
-            const edges = buildEdges(slots);
-            const pairedMothers = new Set(edges.map((edge) => petKey(edge.mother.pet))).size;
-            const connectedSlots = new Set(edges.flatMap((edge) => [edge.father, edge.mother])).size;
-            const fillsRequestedNests = slots.length === nestCount;
-            const allNestsConnected = fillsRequestedNests && connectedSlots === slots.length;
-            const candidate = { slots, edges, fillsRequestedNests, allNestsConnected, pairedMothers, connectedSlots, maleCount: chosenMales.length };
-            if (!best || prefersCandidate(candidate, best))
-                best = candidate;
+        const exactCacheKey = exactSearch && males.length <= exports.EXACT_PARENT_LIMIT
+            ? [
+                nestCount,
+                focus,
+                kind,
+                objective,
+                targetTier,
+                ...Object.entries(owned).filter(([, mask]) => mask).sort(([a], [b]) => a.localeCompare(b)).map(([key, mask]) => `${key}:${mask}`),
+            ].join("|")
+            : "";
+        if (exactCacheKey) {
+            const cached = exactPlanCache.get(exactCacheKey);
+            if (cached)
+                return cached;
+        }
+        let best = exactCacheKey
+            ? makeExactCandidate(males, targets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier)
+            : null;
+        if (!best) {
+            const maxMales = Math.min(males.length, nestCount - 1, exports.EXACT_PARENT_LIMIT);
+            for (let maleCount = 1; maleCount <= maxMales; maleCount += 1) {
+                const chosenMales = chooseMales(males, targets, owned, kind, maleCount, salt);
+                const motherCount = nestCount - chosenMales.length;
+                const chosenTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier).slice(0, motherCount);
+                const roster = [
+                    ...chosenMales.map((parent) => ({ pet: parent.pet, variant: parent.variant, targetKind: kind, role: "father" })),
+                    ...chosenTargets.map((item) => ({ pet: item.pet, variant: item.variant, targetKind: kind, role: "mother" })),
+                ];
+                const slots = optimizeLayout(roster, salt);
+                const edges = buildEdges(slots);
+                const pairedMothers = new Set(edges.map((edge) => petKey(edge.mother.pet))).size;
+                const connectedSlots = new Set(edges.flatMap((edge) => [edge.father, edge.mother])).size;
+                const fillsRequestedNests = slots.length === nestCount;
+                const allNestsConnected = fillsRequestedNests && connectedSlots === slots.length;
+                const candidate = { slots, edges, fillsRequestedNests, allNestsConnected, pairedMothers, connectedSlots, maleCount: chosenMales.length };
+                if (!best || prefersCandidate(candidate, best))
+                    best = candidate;
+            }
         }
         const slots = best?.slots || [];
         const edges = best?.edges || [];
         const pairedMothers = new Set(edges.map((edge) => petKey(edge.mother.pet))).size;
-        return { objective, targetTier, slots, edges, pairedMothers, targetCount: targets.length, directCount: direct.size, uncovered: allMissing.length - direct.size };
+        const result = { objective, targetTier, slots, edges, pairedMothers, targetCount: targets.length, directCount: direct.size, uncovered: allMissing.length - direct.size };
+        if (exactCacheKey) {
+            exactPlanCache.set(exactCacheKey, result);
+            if (exactPlanCache.size > 48)
+                exactPlanCache.delete(exactPlanCache.keys().next().value);
+        }
+        return result;
     }
     function recommendationFor(plan, kind) {
         if (!plan.slots.length || !plan.pairedMothers)
@@ -370,31 +736,55 @@ function createPlanner(pets) {
         return Math.min(99, Math.max(1, Math.round(base + coverage * 7 + connectivity * 4 + urgency)));
     }
     function makeAutoPlan(owned, nestCount, focus, salt) {
+        const finalize = (selected, objective, targetTier) => {
+            const plan = salt === 0 && canUseExactSearch(owned, focus, selected.kind, objective, targetTier)
+                ? makePlan(owned, nestCount, focus, selected.kind, salt, objective, targetTier, true)
+                : selected.plan;
+            return { ...plan, kind: selected.kind, recommendation: recommendationFor(plan, selected.kind) };
+        };
         const rankedShinyPlans = (targetTier) => ["combo", "shiny"]
             .map((kind) => ({ kind, plan: makePlan(owned, nestCount, focus, kind, salt, "shiny", targetTier) }))
             .filter(({ plan }) => plan.slots.length > 0 && plan.pairedMothers > 0)
             .sort((a, b) => b.plan.pairedMothers - a.plan.pairedMothers || b.plan.edges.length - a.plan.edges.length || exports.AUTO_PRIORITY.indexOf(a.kind) - exports.AUTO_PRIORITY.indexOf(b.kind));
-        const limitedShinyProgress = rankedShinyPlans("season-limited");
-        const permanentShinyProgress = rankedShinyPlans("permanent");
-        const fallback = exports.AUTO_PRIORITY.map((kind) => ({ kind, plan: makePlan(owned, nestCount, focus, kind, salt, kind) }));
-        const selected = limitedShinyProgress[0] || permanentShinyProgress[0] || fallback.find(({ plan }) => plan.slots.length > 0 && plan.pairedMothers > 0) || fallback[0];
-        return { ...selected.plan, kind: selected.kind, recommendation: recommendationFor(selected.plan, selected.kind) };
+        for (const targetTier of ["season-limited", "permanent"]) {
+            const selected = rankedShinyPlans(targetTier)[0];
+            if (selected)
+                return finalize(selected, "shiny", targetTier);
+        }
+        let firstFallback = null;
+        for (const kind of exports.AUTO_PRIORITY) {
+            const plan = makePlan(owned, nestCount, focus, kind, salt, kind);
+            if (!firstFallback)
+                firstFallback = { kind, plan };
+            if (plan.slots.length > 0 && plan.pairedMothers > 0)
+                return finalize({ kind, plan }, kind, "all");
+        }
+        const selected = firstFallback;
+        return finalize(selected, selected.kind, "all");
     }
     function makeAutoPlanOptions(owned, nestCount, focus, limit = 5) {
         const candidates = [];
         const seen = new Set();
         const optionLimit = Math.max(1, Math.min(8, Math.floor(limit)));
         const attempts = Math.max(24, optionLimit * 8);
+        const maxStagnantAttempts = Math.max(6, optionLimit);
+        let stagnantAttempts = 0;
         for (let salt = 0; salt < attempts && candidates.length < optionLimit; salt += 1) {
             const plan = makeAutoPlan(owned, nestCount, focus, salt);
             const signature = [
                 plan.kind,
                 plan.objective,
                 plan.targetTier,
-                ...plan.slots.map((slot) => `${slot.role}:${petKey(slot.pet)}:${slot.variant}:${slot.x}:${slot.y}`),
+                ...plan.slots.map((slot) => `${slot.role}:${petKey(slot.pet)}:${slot.variant}`).sort(),
+                ...plan.edges.map((edge) => `${petKey(edge.father.pet)}>${petKey(edge.mother.pet)}`).sort(),
             ].join("|");
-            if (seen.has(signature))
+            if (seen.has(signature)) {
+                stagnantAttempts += 1;
+                if (stagnantAttempts >= maxStagnantAttempts)
+                    break;
                 continue;
+            }
+            stagnantAttempts = 0;
             seen.add(signature);
             candidates.push({ plan, salt });
         }

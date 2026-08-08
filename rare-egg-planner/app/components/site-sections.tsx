@@ -36,15 +36,15 @@ export function HeroSection({ shinyCount, colorfulCount, comboCount, onModuleCha
     <section className="hero" id="top">
       <div className="hero-copy">
         <p className="eyebrow">ROCO RARE EGG PLANNER</p>
-        <h1>让异色与炫彩，<br />在下一窝共存。</h1>
-        <p className="hero-lead">分别登记异色、炫彩、异色炫彩的父本与母本；规划台会按母系出蛋、特征组合、同蛋组与斜角紧邻范围，自动排出当下收益最高的窝位。</p>
-        <div className="hero-actions"><a className="primary-button" href="#catalog" onClick={(event) => { event.preventDefault(); onModuleChange("catalog"); }}>登记珍稀形态 <span>→</span></a><a className="text-button" href="#planner" onClick={(event) => { event.preventDefault(); onModuleChange("planner"); }}>先看推荐</a></div>
+        <h1>为异色与炫彩，<br />规划下一窝。</h1>
+        <p className="hero-lead">分别登记异色、炫彩与异色炫彩的父本和母本；工具会根据后代随母本、亲本特征、蛋组兼容与相邻窝位，生成当前更合适的摆窝方案。</p>
+        <div className="hero-actions"><a className="primary-button" href="#catalog" onClick={(event) => { event.preventDefault(); onModuleChange("catalog"); }}>登记图鉴 <span>→</span></a><a className="text-button" href="#planner" onClick={(event) => { event.preventDefault(); onModuleChange("planner"); }}>查看摆窝推荐</a></div>
       </div>
       <div className="hero-status" aria-label="收集进度摘要">
         <div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="hero-egg"><span>✦</span></div>
-        <div className="status-card status-owned"><strong>{shinyCount}</strong><span>/ {PETS.length} 有异色</span></div>
-        <div className="status-card status-male colorful-stat"><strong>{colorfulCount}</strong><span>/ {PETS.length} 有炫彩</span></div>
-        <div className="status-card status-reach combo-stat"><strong>{comboCount}</strong><span>异色炫彩共存</span></div>
+        <div className="status-card status-owned"><strong>{shinyCount}</strong><span>/ {PETS.length} 已拥有异色</span></div>
+        <div className="status-card status-male colorful-stat"><strong>{colorfulCount}</strong><span>/ {PETS.length} 已拥有炫彩</span></div>
+        <div className="status-card status-reach combo-stat"><strong>{comboCount}</strong><span>已拥有异色炫彩</span></div>
       </div>
     </section>
   );
@@ -59,5 +59,5 @@ export function ResourcesSection() {
 }
 
 export function SiteFooter() {
-  return <footer><span>✦ 珍稀孵蛋规划台</span><p>异色、炫彩与组合形态独立保存于本机</p></footer>;
+  return <footer><span>✦ 珍稀孵蛋规划台</span><p>异色、炫彩与异色炫彩登记独立保存于本机</p></footer>;
 }

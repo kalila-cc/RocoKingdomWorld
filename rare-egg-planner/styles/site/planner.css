@@ -39,17 +39,19 @@
 .nest-map { min-height: 510px; position: relative; overflow: hidden; background: #f4f0e7; }
 .map-grid { position: absolute; inset: 0; opacity: .42; background-image: linear-gradient(rgba(57,43,135,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(57,43,135,.1) 1px, transparent 1px); background-size: 34px 34px; }
 .connections-layer { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.connections-layer line { stroke: #b88118; stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.connections-layer line { stroke: #a99e90; stroke-width: 1.25; stroke-linecap: round; stroke-dasharray: 5 6; stroke-opacity: .52; vector-effect: non-scaling-stroke; }
 .nest-slot { position: absolute; z-index: 2; left: var(--left); top: var(--top); transform: translate(-50%,-50%); width: 105px; text-align: center; outline: none; }
 .nest-slot:hover, .nest-slot:focus, .nest-slot:focus-within { z-index: 12; }
 .nest-slot:focus-visible .nest-shell { box-shadow: 0 0 0 4px rgba(103,82,217,.18), 0 8px 18px rgba(47,35,89,.13); }
 .nest-shell { width: 74px; height: 68px; margin: 0 auto 6px; display: grid; place-items: center; border-radius: 22px 22px 30px 30px; background: #dcd5f1; border: 2px solid #fffefa; box-shadow: 0 8px 18px rgba(47,35,89,.13); position: relative; }
 .nest-shell::before { content: ""; position: absolute; left: 5px; right: 5px; bottom: 5px; height: 20px; border-radius: 14px; background: rgba(255,255,255,.42); }
 .nest-shell img { width: 60px; height: 60px; object-fit: contain; position: relative; z-index: 1; filter: drop-shadow(0 4px 4px rgba(54,43,96,.2)); }
+.nest-variant-mark { position: absolute; z-index: 4; right: -8px; bottom: -7px; width: 30px; height: 30px; display: block; line-height: 0; pointer-events: none; }
+.nest-variant-mark img { width: 27px; height: 27px; object-fit: contain; filter: drop-shadow(0 1px 1px rgba(41,82,110,.16)); }
 .nest-slot.mother .nest-shell { background: #f2d8de; }
-.nest-slot.variant-colorful .nest-shell, .route-pair .variant-colorful { background: #f6dc82; box-shadow: inset 0 0 0 3px #ef7885, 0 8px 18px rgba(47,35,89,.13); }
-.nest-slot.variant-combo .nest-shell, .route-pair .variant-combo { background: #d4cdf8; box-shadow: inset 0 0 0 3px #d4a330, 0 8px 18px rgba(47,35,89,.13); }
-.nest-slot.variant-shiny .nest-shell, .route-pair .variant-shiny { background: #dcd5f1; }
+.route-pair .variant-colorful { background: #f6dc82; box-shadow: inset 0 0 0 3px #ef7885, 0 8px 18px rgba(47,35,89,.13); }
+.route-pair .variant-combo { background: #d4cdf8; box-shadow: inset 0 0 0 3px #d4a330, 0 8px 18px rgba(47,35,89,.13); }
+.route-pair .variant-shiny { background: #dcd5f1; }
 .nest-slot strong { display: block; width: max-content; max-width: min(190px,22vw); margin-inline: auto; color: var(--ink); font-size: 11px; line-height: 1.3; white-space: normal; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; }
 .nest-slot small { color: var(--muted); font-size: 9px; }
 .gender-pin { position: absolute; top: -6px; right: 13px; z-index: 3; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 9px; background: var(--blue); color: white; font-weight: 900; font-size: 12px; border: 2px solid #fffefa; }
@@ -58,7 +60,7 @@
 .pet-group-tooltip b { color: var(--purple-dark); font-size: 10px; }
 .nest-slot:hover .pet-group-tooltip, .nest-slot:focus .pet-group-tooltip, .nest-slot:focus-within .pet-group-tooltip { opacity: 1; visibility: visible; transform: translate(-50%,0); }
 .distance-key { position: absolute; left: 18px; bottom: 14px; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; }
-.distance-key span { width: 28px; height: 2px; background: var(--gold); }
+.distance-key span { width: 28px; height: 1px; background: repeating-linear-gradient(90deg, rgba(125,113,96,.52) 0 5px, transparent 5px 10px); }
 .map-empty-state { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(420px, 76%); text-align: center; }
 .empty-symbol { width: 58px; height: 58px; margin: 0 auto 18px; display: grid; place-items: center; border: 1px dashed #a79bcf; border-radius: 20px; color: var(--purple); font-size: 26px; }
 .map-empty-state h3 { margin: 0; font-size: 22px; }

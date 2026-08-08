@@ -37,9 +37,9 @@ export function usePlannerProgress() {
         if (parsed.focus) setFocus(parsed.focus);
         if (typeof parsed.excludeBattlePass === "boolean") setExcludeBattlePass(parsed.excludeBattlePass);
       }
-      setSaveStatus("更改后已自动保存到本机");
+      setSaveStatus("已自动保存到本机");
     } catch {
-      setSaveStatus("本机存储不可用，请导出进度备份");
+      setSaveStatus("本机存储不可用，请导出进度作为备份");
     }
     setHydrated(true);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -50,9 +50,9 @@ export function usePlannerProgress() {
     /* eslint-disable react-hooks/set-state-in-effect -- save status reflects whether the external browser storage write succeeded. */
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, excludeBattlePass, savedAt: new Date().toISOString() }));
-      setSaveStatus("更改后已自动保存到本机");
+      setSaveStatus("已自动保存到本机");
     } catch {
-      setSaveStatus("本机存储不可用，请导出进度备份");
+      setSaveStatus("本机存储不可用，请导出进度作为备份");
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [owned, nestCount, focus, excludeBattlePass, hydrated]);
@@ -93,9 +93,9 @@ export function usePlannerProgress() {
         if (payload.nestCount) setNestCount(Math.min(10, Math.max(2, payload.nestCount)));
         if (payload.focus) setFocus(payload.focus);
         if (typeof payload.excludeBattlePass === "boolean") setExcludeBattlePass(payload.excludeBattlePass);
-        setToast("进度已恢复");
+        setToast("进度导入成功");
       } catch {
-        setToast("无法识别这个进度文件");
+        setToast("无法识别该进度文件");
       }
     };
     reader.readAsText(file);
@@ -103,9 +103,11 @@ export function usePlannerProgress() {
   }
 
   function clearProgress() {
-    if (!window.confirm(`确定清空全部 ${PETS.length} 只精灵的异色、炫彩与组合形态记录吗？`)) return;
+    const confirmed = window.confirm(`此操作无法撤销，建议先导出进度作为备份。\n\n确定清空全部 ${PETS.length} 只精灵的异色、炫彩与异色炫彩登记吗？`);
+    if (!confirmed) return false;
     setOwned({});
-    setToast("拥有记录已清空");
+    setToast("图鉴登记已清空");
+    return true;
   }
 
   return {

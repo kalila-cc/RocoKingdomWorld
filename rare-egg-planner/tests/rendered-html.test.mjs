@@ -22,8 +22,8 @@ test("server-renders the rare egg planner", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>珍稀孵蛋规划台｜洛克王国：世界<\/title>/);
-  assert.match(html, /让异色与炫彩/);
-  assert.match(html, /异色炫彩共存/);
+  assert.match(html, /为异色与炫彩/);
+  assert.match(html, /已拥有异色炫彩/);
   assert.match(html, /主要功能[\s\S]*?href="#home"[\s\S]*?首页[\s\S]*?href="#catalog"[\s\S]*?图鉴登记[\s\S]*?href="#planner"[\s\S]*?摆窝推荐/);
   assert.match(html, /role="tabpanel"[\s\S]*?aria-labelledby="module-tab-home"/);
   assert.doesNotMatch(html, /功能模块快速定位|class="side-nav"/);
@@ -36,15 +36,16 @@ test("server-renders the rare egg planner", async () => {
   assert.doesNotMatch(html, /常用参考入口|Bwiki 蛋组计算器|炫彩总览|小窝排布规则/);
   assert.doesNotMatch(html, /推荐是怎样算出来的/);
   assert.doesNotMatch(html, /曼哈顿距离/);
-  assert.doesNotMatch(html, /异色 · 炫彩图鉴|此刻最值得摆的窝|异色炫彩扩散路线/);
+  assert.doesNotMatch(html, /异色 · 炫彩图鉴|当前推荐摆窝方案|异色炫彩后续收集路线/);
 });
 
 test("offline package is self-contained and data-complete", async () => {
-  const [html, app, plannerCore, plannerSource, data, style, appStyle, updater, sourceUpdater, updaterRuntime, updaterWiki, updaterEggs, updaterBuilder, updaterInstall, launcher, petFiles, seriesIconFiles, publicSeriesIconFiles, shinyMark, colorfulMark, comboMark, brandIcon, favicon] = await Promise.all([
+  const [html, app, plannerCore, plannerSource, progressSource, data, style, appStyle, updater, sourceUpdater, updaterRuntime, updaterWiki, updaterEggs, updaterBuilder, updaterInstall, launcher, petFiles, seriesIconFiles, publicSeriesIconFiles, shinyMark, colorfulMark, comboMark, brandIcon, favicon] = await Promise.all([
     readFile(new URL("../offline/index.html", import.meta.url), "utf8"),
     readFile(new URL("../offline/assets/app.js", import.meta.url), "utf8"),
     readFile(new URL("../offline/assets/planner-core.js", import.meta.url), "utf8"),
     readFile(new URL("../app/planner-core.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/hooks/use-planner-progress.ts", import.meta.url), "utf8"),
     readFile(new URL("../offline/assets/data.js", import.meta.url), "utf8"),
     readFile(new URL("../offline/assets/style.css", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -72,6 +73,11 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(html, /assets\/app\.js/);
   assert.match(html, /assets\/brand\/rare-egg-icon-transparent\.png/);
   assert.match(html, /assets\/brand\/rare-egg-favicon\.png/);
+  assert.match(html, /当前推荐摆窝方案/);
+  assert.match(html, /本轮孵蛋目标/);
+  assert.match(html, /后续收集路线/);
+  assert.match(app, /异色获取信息/);
+  assert.match(app, /后代不继承此形态/);
   assert.ok(brandIcon.length > 10_000, "offline package should include the generated website icon");
   assert.ok(favicon.length > 1_000, "offline package should include the optically corrected favicon");
   assert.doesNotMatch(html, /(?:src|href)=["']\/\//);
@@ -106,9 +112,21 @@ test("offline package is self-contained and data-complete", async () => {
   assert.doesNotMatch(plannerCore, /Math\.abs\(a\.x-b\.x\)\+Math\.abs\(a\.y-b\.y\)<=5/);
   assert.match(plannerSource, /10: \[3, 4, 3\]/);
   assert.match(plannerCore, /rankedShinyPlans/);
-  assert.match(plannerSource, /limitedShinyProgress\[0\] \|\| permanentShinyProgress\[0\]/);
+  assert.match(plannerSource, /for \(const targetTier of \["season-limited", "permanent"\] as const\)/);
+  assert.match(plannerSource, /if \(selected\) return finalize\(selected, "shiny", targetTier\)/);
   assert.match(plannerCore, /recommendationFor/);
   assert.match(plannerCore, /function makeAutoPlanOptions/);
+  assert.match(plannerSource, /EXACT_PARENT_LIMIT = 5/);
+  assert.match(plannerSource, /function makeExactCandidate/);
+  assert.match(plannerSource, /parentCount > 0 && parentCount <= EXACT_PARENT_LIMIT/);
+  assert.match(plannerSource, /salt === 0 && canUseExactSearch/);
+  assert.match(plannerSource, /const adjacentPositionPairs: Array<\[number, number\]>/);
+  assert.match(plannerSource, /const pairable = Array\.from/);
+  assert.match(plannerSource, /const scoreArrangement = \(arrangement: number\[\]\)/);
+  assert.doesNotMatch(plannerSource, /function layoutScore/);
+  assert.match(plannerSource, /const maxStagnantAttempts = Math\.max\(6, optionLimit\)/);
+  assert.match(plannerSource, /if \(stagnantAttempts >= maxStagnantAttempts\) break/);
+  assert.match(plannerCore, /stagnantAttempts >= maxStagnantAttempts/);
   assert.match(html, /id="planOptions"/);
   assert.doesNotMatch(html, /id="refreshPlan"/);
   assert.match(app, /state\.selectedPlan/);
@@ -129,14 +147,14 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(app, /NON_BATTLE_PASS_PETS/);
   assert.match(app, /excludeBattlePass/);
   assert.match(app, /PLANNERS\.noBattlePass/);
-  assert.match(app, /已从收集目标移除/);
+  assert.match(app, /当前不参与统计与推荐/);
   assert.match(app, /const EGG_GROUPS = Array\.from/);
   assert.match(app, /state\.group==="none"/);
   assert.match(app, /pet-group-tooltip/);
   assert.match(app, /eggGroupResult/);
   assert.doesNotMatch(html, /id="kindSwitch"/);
   assert.doesNotMatch(html, /priority-order/);
-  assert.match(html, /横、竖或斜角紧邻/);
+  assert.match(html, /窝位横、竖或斜向相邻/);
   assert.doesNotMatch(html, /曼哈顿距离/);
   assert.doesNotMatch(html, /class="side-nav"/);
   assert.match(html, /data-module-view="home"/);
@@ -213,6 +231,10 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(style, /\.module-view\[hidden\]\s*\{[^}]*display:\s*none !important/s);
   assert.match(style, /\.topbar\s*\{[^}]*position:\s*sticky/s);
   assert.match(style, /\.save-actions button\s*\{[^}]*min-width:\s*96px[^}]*white-space:\s*nowrap/s);
+  assert.match(style, /\.save-actions \.danger-action\s*\{[^}]*min-width:\s*96px[^}]*border-color:\s*#d95b65[^}]*background:\s*#fff3f4[^}]*color:\s*#b32634/s);
+  assert.match(html, /class="danger-action" id="clearBtn" aria-label="清空全部图鉴登记（需要确认）"/);
+  assert.match(app, /const confirmed=confirm\(`此操作无法撤销，建议先导出进度作为备份。[\s\S]*?if\(!confirmed\)return;state\.owned=\{\}/);
+  assert.match(progressSource, /const confirmed = window\.confirm\(`此操作无法撤销，建议先导出进度作为备份。[\s\S]*?if \(!confirmed\) return false;[\s\S]*?setOwned\(\{\}\)/);
   assert.match(style, /\.search-box\s*\{[^}]*min-width:\s*240px[^}]*flex:\s*1 1 300px/s);
   assert.match(style, /\.source-filter-toggle\s*\{[^}]*min-width:\s*190px[^}]*min-height:\s*48px/s);
   assert.match(style, /\.source-filter-toggle\.active\s*\{[^}]*background:\s*#f6f2ff/s);
@@ -256,6 +278,12 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(style, /\.nest-card, \.recommendation-panel\s*\{[^}]*background:\s*#fffefa/s);
   assert.match(style, /\.nest-slot strong\s*\{[^}]*width:\s*max-content[^}]*max-width:\s*min\(190px,22vw\)[^}]*white-space:\s*normal[^}]*overflow:\s*visible[^}]*text-overflow:\s*clip/s);
   assert.doesNotMatch(style, /\.nest-slot strong\s*\{[^}]*text-overflow:\s*ellipsis/s);
+  assert.match(style, /\.nest-variant-mark\s*\{[^}]*right:\s*-8px[^}]*bottom:\s*-7px[^}]*width:\s*30px[^}]*height:\s*30px/s);
+  assert.doesNotMatch(style, /\.nest-variant-mark\s*\{[^}]*(?:background|border|box-shadow):/s);
+  assert.match(style, /\.nest-slot\.mother \.nest-shell\s*\{[^}]*background:\s*#f2d8de/s);
+  assert.doesNotMatch(style, /\.nest-slot\.variant-(?:shiny|colorful|combo) \.nest-shell\s*\{/s);
+  assert.match(app, /class="nest-variant-mark mark-\$\{slot\.variant\}"[^>]*aria-label="\$\{variantLabel\}"/);
+  assert.match(app, /assets\/traits\/mark-\$\{slot\.variant\}\.png/);
   assert.match(style, /\.planner-grid\s*\{[^}]*minmax\(370px,\s*390px\)/s);
   assert.match(style, /\.panel-title span\s*\{[^}]*font-size:\s*20px/s);
   assert.match(style, /\.panel-title small\s*\{[^}]*font-size:\s*13px/s);
@@ -320,7 +348,36 @@ test("offline package is self-contained and data-complete", async () => {
   assert.equal(rareMotherSlot?.variant, "colorful", "同等兼容数量下应先选已登记的炫彩母本，且不得降级显示为普通母本");
   const roadmapOwned = { ...syntheticOwned, 测试普通母本甲: plannerApi.OWN.SHINY_F, 测试普通母本乙: plannerApi.OWN.SHINY_F };
   const rareMotherRoadmap = syntheticPlanner.buildRoadmap(roadmapOwned, "all", "shiny", "shiny");
-  assert.equal(rareMotherRoadmap[0]?.motherVariant, "colorful", "扩散路线也应保留已登记的炫彩母本形态");
+  assert.equal(rareMotherRoadmap[0]?.motherVariant, "colorful", "后续收集路线也应保留已登记的炫彩母本形态");
+  const hybridPets = [
+    { key: "father-a", name: "father-a", form: "", season: "S3", groups: ["father-a"], maleTargets: ["target-1", "target-2", "target-3", "target-4"], flags: 1, availability: "season-limited", availabilityReason: "test", offspringKey: "father-a" },
+    { key: "father-b", name: "father-b", form: "", season: "S3", groups: ["father-b"], maleTargets: ["target-1", "target-2", "target-5"], flags: 1, availability: "season-limited", availabilityReason: "test", offspringKey: "father-b" },
+    { key: "father-c", name: "father-c", form: "", season: "S3", groups: ["father-c"], maleTargets: ["target-3", "target-4", "target-6"], flags: 1, availability: "season-limited", availabilityReason: "test", offspringKey: "father-c" },
+    ...Array.from({ length: 6 }, (_, index) => ({
+      key: `target-${index + 1}`,
+      name: `target-${index + 1}`,
+      form: "",
+      season: "S3",
+      groups: ["target"],
+      maleTargets: [],
+      flags: 1,
+      availability: "season-limited",
+      availabilityReason: "test",
+      offspringKey: `target-${index + 1}`,
+    })),
+  ];
+  const hybridPlanner = plannerApi.createPlanner(hybridPets);
+  const hybridOwned = {
+    "father-a": plannerApi.OWN.COMBO_M,
+    "father-b": plannerApi.OWN.COMBO_M,
+    "father-c": plannerApi.OWN.COMBO_M,
+  };
+  const exactHybridPlan = hybridPlanner.makeAutoPlan(hybridOwned, 8, "all", 0);
+  const heuristicHybridPlan = hybridPlanner.makeAutoPlan(hybridOwned, 8, "all", 1);
+  assert.equal(exactHybridPlan.slots.filter((slot) => slot.role === "father").length, 2, "the exact branch should find the non-greedy two-father combination");
+  assert.equal(exactHybridPlan.pairedMothers, 6, "the exact branch should cover all six mothers when greedy coverage stops at five");
+  assert.equal(new Set(exactHybridPlan.edges.flatMap((edge) => [edge.father.pet.key, edge.mother.pet.key])).size, 8, "the exact branch should connect every selected father and mother");
+  assert.ok(exactHybridPlan.pairedMothers > heuristicHybridPlan.pairedMothers, "the exact first option should improve a known greedy counterexample");
   const battlePassPets = pets.filter((pet) => plannerApi.isBattlePassPet(pet));
   assert.equal(battlePassPets.length, 6, "current database should identify all six battle-pass pets");
   assert.deepEqual(Array.from(battlePassPets.map((pet) => pet.name)).sort(), ["爆焰喷喷", "疾光千兽", "离心舞者", "绒仙子", "胡桃王子", "雪怪"].sort());
@@ -333,9 +390,12 @@ test("offline package is self-contained and data-complete", async () => {
   };
   const fullNestPlan = planner.makeAutoPlan(fullNestOwned, 10, "all", 0);
   const planOptions = planner.makeAutoPlanOptions(fullNestOwned, 10, "all");
-  const planOptionSignatures = planOptions.map((option) => option.slots.map((slot) => `${slot.role}:${slot.pet.key}:${slot.variant}:${slot.x}:${slot.y}`).join("|"));
+  const planOptionSignatures = planOptions.map((option) => [
+    ...option.slots.map((slot) => `${slot.role}:${slot.pet.key}:${slot.variant}`).sort(),
+    ...option.edges.map((edge) => `${edge.father.pet.key}>${edge.mother.pet.key}`).sort(),
+  ].join("|"));
   assert.ok(planOptions.length > 1 && planOptions.length <= 5, "a feasible roster should expose a compact row of alternative plans");
-  assert.equal(new Set(planOptionSignatures).size, planOptions.length, "alternative plan buttons must not repeat the same layout");
+  assert.equal(new Set(planOptionSignatures).size, planOptions.length, "alternative plan buttons must not repeat the same roster and pairing graph");
   assert.ok(planOptions.every((option) => option.slots.length === 10), "every selectable plan should keep all configured nests in use");
   assert.ok(planOptions.every((option, index) => index === 0 || planOptions[index - 1].recommendation >= option.recommendation), "selectable plans should be ordered by recommendation");
   const connectedMothers = new Set(fullNestPlan.edges.map((edge) => edge.mother.pet.key));

@@ -6,7 +6,7 @@
 
 | 工具 | 功能 | 使用方式 |
 | --- | --- | --- |
-| [珍稀孵蛋规划台](./rare-egg-planner/) | 登记异色、炫彩与异色炫彩精灵；支持赛季、性别、蛋组、系别与拥有状态筛选，可排除战令精灵，并根据形态遗传和限时优先级生成多组小窝摆放方案 | 查看工具目录中的 [README](./rare-egg-planner/README.md)，或直接打开 `rare-egg-planner/offline/index.html` |
+| [珍稀孵蛋规划台](./rare-egg-planner/) | 登记异色、炫彩与异色炫彩精灵；支持赛季、性别、蛋组、系别与拥有状态筛选，可排除战令精灵，并通过精确与启发式混合搜索生成多组小窝摆放方案 | 查看工具目录中的 [README](./rare-egg-planner/README.md)，或直接打开 `rare-egg-planner/offline/index.html` |
 
 ## 目录约定
 

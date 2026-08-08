@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="离线登记异色、炫彩与异色炫彩精灵，自动生成高效率孵蛋摆窝方案。">
+  <meta name="description" content="离线登记异色、炫彩与异色炫彩精灵，自动生成高效的孵蛋摆窝方案。">
   <title>珍稀孵蛋规划台｜洛克王国：世界</title>
   <link rel="icon" type="image/png" sizes="64x64" href="assets/brand/rare-egg-favicon.png">
   <link rel="stylesheet" href="assets/style.css">
@@ -22,16 +22,16 @@
   <section class="hero" id="top">
     <div class="hero-copy">
       <p class="eyebrow">ROCO RARE EGG PLANNER</p>
-      <h1>让异色与炫彩，<br>在下一窝共存。</h1>
-      <p class="hero-lead">分别登记异色、炫彩、异色炫彩的父本与母本；规划台会按母系出蛋、特征组合、同蛋组和斜角紧邻范围，自动排出当下收益最高的窝位。</p>
-      <div class="hero-actions"><a class="primary-button" data-module-target="catalog" href="#catalog">登记珍稀形态 <span>→</span></a><a class="text-button" data-module-target="planner" href="#planner">先看推荐</a></div>
+      <h1>为异色与炫彩，<br>规划下一窝。</h1>
+      <p class="hero-lead">分别登记异色、炫彩与异色炫彩的父本和母本；工具会根据后代随母本、亲本特征、蛋组兼容与相邻窝位，生成当前更合适的摆窝方案。</p>
+      <div class="hero-actions"><a class="primary-button" data-module-target="catalog" href="#catalog">登记图鉴 <span>→</span></a><a class="text-button" data-module-target="planner" href="#planner">查看摆窝推荐</a></div>
     </div>
     <div class="hero-status">
       <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
       <div class="hero-egg"><span>✦</span></div>
-      <div class="status-card status-owned"><strong id="heroOwned">0</strong><span>/ <b data-pet-total>59</b> 有异色</span></div>
-      <div class="status-card status-male colorful-stat"><strong id="heroMale">0</strong><span>/ <b data-pet-total>59</b> 有炫彩</span></div>
-      <div class="status-card status-reach combo-stat"><strong id="heroReach">0</strong><span>异色炫彩共存</span></div>
+      <div class="status-card status-owned"><strong id="heroOwned">0</strong><span>/ <b data-pet-total>59</b> 已拥有异色</span></div>
+      <div class="status-card status-male colorful-stat"><strong id="heroMale">0</strong><span>/ <b data-pet-total>59</b> 已拥有炫彩</span></div>
+      <div class="status-card status-reach combo-stat"><strong id="heroReach">0</strong><span>已拥有异色炫彩</span></div>
     </div>
   </section>
 
@@ -42,7 +42,7 @@
 
   <div class="module-view" data-module-view="planner" role="tabpanel" aria-labelledby="module-tab-planner" hidden>
   <section class="planner-section" id="plan">
-    <div class="section-heading solo"><div><p class="eyebrow">SMART NEST LAYOUT</p><h2>此刻最值得摆的窝</h2></div></div>
+    <div class="section-heading solo"><div><p class="eyebrow">SMART NEST LAYOUT</p><h2>当前推荐摆窝方案</h2></div></div>
     <div class="planner-grid">
       <article class="nest-card">
         <div class="nest-toolbar">
@@ -50,43 +50,43 @@
           <div class="control-block focus-control"><span class="control-label">目标赛季</span><div class="pill-switch" id="focusSwitch"><button class="active" data-focus="all">全部</button><button data-focus="S1">S1</button><button data-focus="S2">S2</button><button data-focus="S3">S3</button></div></div>
           <div class="plan-score" id="planScore" aria-label="当前方案推荐度"><span>推荐度</span><strong id="recommendationScore">--</strong><small id="recommendationKind">自动方案</small></div>
         </div>
-        <div class="plan-options-bar"><div class="plan-options-label"><strong>可选方案</strong><small id="planOptionsStatus">当前仅有一组有效方案</small></div><div class="plan-option-switch" id="planOptions" role="group" aria-label="摆窝可选方案"></div></div>
-        <div class="nest-map empty" id="nestMap"><div class="map-grid"></div><div class="distance-key"><span></span> 实线代表同蛋组且横、竖或斜角紧邻</div></div>
+        <div class="plan-options-bar"><div class="plan-options-label"><strong>可选方案</strong><small id="planOptionsStatus">当前仅生成 1 个可用方案</small></div><div class="plan-option-switch" id="planOptions" role="group" aria-label="摆窝可选方案"></div></div>
+        <div class="nest-map empty" id="nestMap"><div class="map-grid"></div><div class="distance-key"><span></span> 连线表示两只精灵同蛋组，且窝位横、竖或斜向相邻</div></div>
       </article>
-      <aside class="recommendation-panel"><div class="panel-title"><span>本轮蛋单</span><small id="panelTarget">蛋种跟随母本</small></div><div class="egg-list" id="eggList"><p class="panel-empty">登记图鉴后，具体蛋单会出现在这里。</p></div></aside>
+      <aside class="recommendation-panel"><div class="panel-title"><span>本轮孵蛋目标</span><small id="panelTarget">后代种类由母本决定</small></div><div class="egg-list" id="eggList"><p class="panel-empty">完成图鉴登记后，推荐目标会显示在这里。</p></div></aside>
     </div>
   </section>
 
   <section class="roadmap-section" id="route">
-    <div class="section-heading compact"><div><p class="eyebrow">COLLECTION ROUTE</p><h2><span id="routeKind">异色</span>扩散路线</h2></div><p>每一步默认把新目标继续孵到可作父本的对应形态，再打开更多蛋组连接。</p></div>
+    <div class="section-heading compact"><div><p class="eyebrow">COLLECTION ROUTE</p><h2><span id="routeKind">异色</span>后续收集路线</h2></div><p>每完成一个目标，默认继续获得对应父本，用它连接更多蛋组和后续目标。</p></div>
     <div id="routeArea"></div>
   </section>
   </div>
 
   <div class="module-view" data-module-view="catalog" role="tabpanel" aria-labelledby="module-tab-catalog" hidden>
   <section class="collection-section" id="collection">
-    <div class="section-heading collection-heading"><div><p class="eyebrow">MY RARE CATALOG</p><h2>异色 · 炫彩图鉴</h2><p class="collection-note">三类记录互不覆盖；“异色炫彩”会同时计入异色与炫彩拥有进度；同名地区形态按独立卡片登记。后天形成的形态仍可登记并作为亲本，但不会被当作可原样孵出的目标。排除战令精灵后，这类精灵不会计入统计、推荐与路线。当前尚缺 <b id="limitedMissingCount">0</b> 张可孵的赛季限时异色，推荐会先推进它们。</p></div><div class="save-actions"><button id="exportBtn">导出进度</button><button id="importBtn">导入进度</button><button class="danger-link" id="clearBtn">清空</button><input id="importInput" type="file" accept="application/json,.json" hidden></div></div>
-    <div class="catalog-stats"><div><strong id="statOwned">0</strong><span>有异色</span></div><div><strong id="statMale">0</strong><span>有炫彩</span></div><div><strong id="statMissing">0</strong><span>异色炫彩</span></div><div><strong id="statOther">0</strong><span>需其他渠道</span></div><p id="saveStatus">更改后自动保存到本机</p></div>
+    <div class="section-heading collection-heading"><div><p class="eyebrow">MY RARE CATALOG</p><h2>异色 · 炫彩图鉴</h2><p class="collection-note">异色、炫彩与异色炫彩分别登记，互不覆盖；异色炫彩会同时计入异色与炫彩进度。同名地区形态使用独立卡片。后天形成的形态仍可登记并作为亲本，但不会作为可原样孵化的目标。排除战令精灵后，它们将不参与统计、推荐和后续路线。当前还有 <b id="limitedMissingCount">0</b> 只可孵的赛季限时异色尚未收集，摆窝推荐会优先选择这些目标。</p></div><div class="save-actions"><button id="exportBtn">导出进度</button><button id="importBtn">导入进度</button><button class="danger-action" id="clearBtn" aria-label="清空全部图鉴登记（需要确认）">清空登记</button><input id="importInput" type="file" accept="application/json,.json" hidden></div></div>
+    <div class="catalog-stats"><div><strong id="statOwned">0</strong><span>已拥有异色</span></div><div><strong id="statMale">0</strong><span>已拥有炫彩</span></div><div><strong id="statMissing">0</strong><span>已拥有异色炫彩</span></div><div><strong id="statOther">0</strong><span>需通过其他渠道</span></div><p id="saveStatus">已自动保存到本机</p></div>
     <div class="catalog-toolbar">
       <label class="search-box"><span>⌕</span><input id="searchInput" placeholder="搜索精灵、系别或蛋组" aria-label="搜索精灵、系别或蛋组"></label>
       <div class="filter-group" id="seasonFilter"><button class="active" data-value="all">全部赛季</button><button data-value="S1">S1</button><button data-value="S2">S2</button><button data-value="S3">S3</button></div>
       <div class="filter-group gender-filter" id="genderFilter" role="group" aria-label="已登记性别筛选"><button class="active" data-value="all" aria-pressed="true">全部性别</button><button data-value="male" aria-pressed="false">雄性</button><button data-value="female" aria-pressed="false">雌性</button></div>
       <div class="filter-group view" id="viewFilter"><button class="active" data-value="all">全部</button><button data-value="owned">已拥有</button><button data-value="missing">未拥有</button></div>
-      <button class="source-filter-toggle" id="battlePassFilter" type="button" aria-pressed="false"><span aria-hidden="true"></span><span><strong>排除战令精灵</strong><small id="battlePassFilterStatus">当前计入收集目标</small></span></button>
+      <button class="source-filter-toggle" id="battlePassFilter" type="button" aria-pressed="false"><span aria-hidden="true"></span><span><strong>排除战令精灵</strong><small id="battlePassFilterStatus">当前参与统计与推荐</small></span></button>
     </div>
     <div class="egg-group-filter-panel">
-      <div class="egg-group-filter-heading"><div><span>EGG GROUP INDEX</span><strong>按蛋组查看图鉴</strong></div><p><b id="eggGroupResult">0</b> 只符合当前条件</p></div>
+      <div class="egg-group-filter-heading"><div><span>EGG GROUP INDEX</span><strong>按蛋组查看图鉴</strong></div><p><b id="eggGroupResult">0</b> 只精灵符合当前筛选</p></div>
       <div class="egg-group-filter-list" id="eggGroupFilter" role="group" aria-label="蛋组筛选"></div>
     </div>
     <div class="series-filter-panel">
-      <div class="series-filter-heading"><div><span>PET TYPE INDEX</span><strong>按系别查看图鉴</strong></div><p>双系别精灵可被任一系别筛中</p></div>
+      <div class="series-filter-heading"><div><span>PET TYPE INDEX</span><strong>按系别查看图鉴</strong></div><p>双系别精灵会出现在两个所属系别下</p></div>
       <div class="series-filter-list" id="seriesFilter" role="group" aria-label="系别筛选"></div>
     </div>
     <div class="pet-grid" id="petGrid"></div>
     <div class="no-results" id="noResults" hidden>没有符合当前筛选的精灵。</div>
   </section>
   </div>
-  <footer><span>✦ 珍稀孵蛋规划台</span><p>异色、炫彩与组合形态独立保存于本机</p></footer>
+  <footer><span>✦ 珍稀孵蛋规划台</span><p>异色、炫彩与异色炫彩登记独立保存于本机</p></footer>
   <div class="toast" id="toast" role="status" hidden></div>
 </main>
 <script src="assets/data.js"></script>

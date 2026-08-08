@@ -56,7 +56,7 @@ export default function Home() {
           onToggleOwned={(key, bit) => { toggleOwned(key, bit); setSelectedPlan(0); }}
           onExport={exportProgress}
           onImport={(event) => { setSelectedPlan(0); importProgress(event); }}
-          onClear={() => { clearProgress(); setSelectedPlan(0); }}
+          onClear={() => { if (clearProgress()) setSelectedPlan(0); }}
         />
       </div>}
       {activeModule === "planner" && <div className="module-view" role="tabpanel" aria-labelledby="module-tab-planner">

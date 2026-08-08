@@ -52,20 +52,20 @@ function PetCard({ pet, ownedMask, onToggleOwned }: { pet: Pet; ownedMask: numbe
         <span className={`availability-tag ${pet.availability}`}>{pet.availability === "permanent" ? "常驻 · 低优" : "限时 · 优先"}</span>
         {Boolean(ownedMask) && <span className="owned-tag">已登记</span>}
         {disabled && <span className="lock-tag">不可繁育</span>}
-        {offspring && <span className="inheritance-tag">后代为原形态</span>}
+        {offspring && <span className="inheritance-tag">后代不继承此形态</span>}
       </div>
       <div className="pet-info">
         <h3>
           <span className="pet-name">{pet.name}</span>
-          <span className="pet-info-trigger" tabIndex={0} aria-label={`${petLabel(pet)}，系别：${pet.series.join("、")}，异色时效：${pet.availabilityReason}，蛋组：${pet.groups.length ? pet.groups.join("、") : "无可用蛋组"}${inheritanceNote}${pet.evolutionChain.length > 1 ? `，进化链：${pet.evolutionChain.join(" → ")}` : ""}`}>
+          <span className="pet-info-trigger" tabIndex={0} aria-label={`${petLabel(pet)}，系别：${pet.series.join("、")}，异色获取信息：${pet.availabilityReason}，蛋组：${pet.groups.length ? pet.groups.join("、") : "无可用蛋组"}${inheritanceNote}${pet.evolutionChain.length > 1 ? `，进化链：${pet.evolutionChain.join(" → ")}` : ""}`}>
             i
             <span className="pet-evolution-tooltip" role="tooltip">
               {pet.form && <span className="pet-tooltip-section"><strong>地区形态</strong><span>{pet.form}</span></span>}
               <span className="pet-tooltip-section"><strong>所属系别</strong><span>{pet.series.map((series) => `${series}系`).join(" · ")}</span></span>
-              <span className="pet-tooltip-section"><strong>异色时效</strong><span>{pet.availabilityReason}</span></span>
+              <span className="pet-tooltip-section"><strong>异色获取信息</strong><span>{pet.availabilityReason}</span></span>
               <span className="pet-tooltip-section"><strong>所在蛋组</strong><span>{pet.groups.length ? pet.groups.join(" · ") : "无可用蛋组"}</span></span>
               {offspring && <span className="pet-tooltip-section offspring-result"><strong>繁育后代</strong><span>{offspringLabel}<small>{pet.offspringReason}</small></span></span>}
-              {pet.evolutionChain.length > 1 && <span className="pet-tooltip-section"><strong>进化链与附加形态</strong><span>{pet.evolutionChain.join(" → ")}</span></span>}
+              {pet.evolutionChain.length > 1 && <span className="pet-tooltip-section"><strong>进化链及其他形态</strong><span>{pet.evolutionChain.join(" → ")}</span></span>}
             </span>
           </span>
         </h3>
@@ -78,7 +78,7 @@ function PetCard({ pet, ownedMask, onToggleOwned }: { pet: Pet; ownedMask: numbe
         {rows.map((row) => (
           <div className={`rare-row variant-${row.variant}`} key={row.variant}>
             <div className="variant-label"><span className={`variant-mark mark-${row.variant}`} aria-hidden="true"><Image src={`/assets/traits/mark-${row.variant}.png`} alt="" width={26} height={26} unoptimized /></span><span>{row.label}</span></div>
-            <button type="button" disabled={Boolean(pet.flags & FLAG.FEMALE_ONLY)} className={`gender-button gender-male ${ownedMask & row.male ? "active" : ""}`} aria-pressed={Boolean(ownedMask & row.male)} onClick={() => onToggleOwned(key, row.male)} title={pet.flags & FLAG.FEMALE_ONLY ? "此精灵仅有母性" : `${row.label}父本`}>♂</button>
+            <button type="button" disabled={Boolean(pet.flags & FLAG.FEMALE_ONLY)} className={`gender-button gender-male ${ownedMask & row.male ? "active" : ""}`} aria-pressed={Boolean(ownedMask & row.male)} onClick={() => onToggleOwned(key, row.male)} title={pet.flags & FLAG.FEMALE_ONLY ? "该精灵仅有雌性" : `${row.label}父本`}>♂</button>
             <button type="button" className={`gender-button gender-female ${ownedMask & row.female ? "active" : ""}`} aria-pressed={Boolean(ownedMask & row.female)} onClick={() => onToggleOwned(key, row.female)} title={`${row.label}母本`}>♀</button>
           </div>
         ))}
@@ -113,19 +113,19 @@ export function CollectionSection({ pets, owned, shinyCount, colorfulCount, comb
   return (
     <section className="collection-section" id="collection">
       <div className="section-heading collection-heading">
-        <div><p className="eyebrow">MY RARE CATALOG</p><h2>异色 · 炫彩图鉴</h2><p className="collection-note">三类记录互不覆盖；“异色炫彩”会同时计入异色与炫彩拥有进度；同名地区形态按独立卡片登记。后天形成的形态仍可登记并作为亲本，但不会被当作可原样孵出的目标。排除战令精灵后，这类精灵不会计入统计、推荐与路线。当前尚缺 {limitedMissingCount} 张可孵的赛季限时异色，推荐会先推进它们。</p></div>
-        <div className="save-actions"><button type="button" onClick={onExport}>导出进度</button><button type="button" onClick={() => importRef.current?.click()}>导入进度</button><button className="danger-link" type="button" onClick={onClear}>清空</button><input ref={importRef} type="file" accept="application/json,.json" onChange={onImport} hidden /></div>
+        <div><p className="eyebrow">MY RARE CATALOG</p><h2>异色 · 炫彩图鉴</h2><p className="collection-note">异色、炫彩与异色炫彩分别登记，互不覆盖；异色炫彩会同时计入异色与炫彩进度。同名地区形态使用独立卡片。后天形成的形态仍可登记并作为亲本，但不会作为可原样孵化的目标。排除战令精灵后，它们将不参与统计、推荐和后续路线。当前还有 {limitedMissingCount} 只可孵的赛季限时异色尚未收集，摆窝推荐会优先选择这些目标。</p></div>
+        <div className="save-actions"><button type="button" onClick={onExport}>导出进度</button><button type="button" onClick={() => importRef.current?.click()}>导入进度</button><button className="danger-action" type="button" aria-label="清空全部图鉴登记（需要确认）" onClick={onClear}>清空登记</button><input ref={importRef} type="file" accept="application/json,.json" onChange={onImport} hidden /></div>
       </div>
-      <div className="catalog-stats"><div><strong>{shinyCount}</strong><span>有异色</span></div><div><strong>{colorfulCount}</strong><span>有炫彩</span></div><div><strong>{comboCount}</strong><span>异色炫彩</span></div><div><strong>{otherChannelMissingCount}</strong><span>需其他渠道</span></div><p>{saveStatus}</p></div>
+      <div className="catalog-stats"><div><strong>{shinyCount}</strong><span>已拥有异色</span></div><div><strong>{colorfulCount}</strong><span>已拥有炫彩</span></div><div><strong>{comboCount}</strong><span>已拥有异色炫彩</span></div><div><strong>{otherChannelMissingCount}</strong><span>需通过其他渠道</span></div><p>{saveStatus}</p></div>
       <div className="catalog-toolbar">
         <label className="search-box"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索精灵、系别或蛋组" aria-label="搜索精灵、系别或蛋组" /></label>
         <div className="filter-group" role="group" aria-label="赛季筛选">{(["all", ...seasonKeys] as Focus[]).map((value) => <button type="button" className={seasonFilter === value ? "active" : ""} key={value} aria-pressed={seasonFilter === value} onClick={() => setSeasonFilter(value)}>{value === "all" ? "全部赛季" : value}</button>)}</div>
         <div className="filter-group gender-filter" role="group" aria-label="已登记性别筛选">{(["all", "male", "female"] as GenderFilter[]).map((value) => <button type="button" className={genderFilter === value ? "active" : ""} key={value} aria-pressed={genderFilter === value} onClick={() => setGenderFilter(value)}>{value === "all" ? "全部性别" : value === "male" ? "雄性" : "雌性"}</button>)}</div>
         <div className="filter-group view" role="group" aria-label="拥有状态筛选">{(["all", "owned", "missing"] as ViewFilter[]).map((value) => <button type="button" className={viewFilter === value ? "active" : ""} key={value} aria-pressed={viewFilter === value} onClick={() => setViewFilter(value)}>{value === "all" ? "全部" : value === "owned" ? "已拥有" : "未拥有"}</button>)}</div>
-        <button className={`source-filter-toggle ${excludeBattlePass ? "active" : ""}`} type="button" aria-pressed={excludeBattlePass} onClick={() => onExcludeBattlePassChange(!excludeBattlePass)}><span aria-hidden="true" /><span><strong>排除战令精灵</strong><small>{excludeBattlePass ? "已从收集目标移除" : "当前计入收集目标"}</small></span></button>
+        <button className={`source-filter-toggle ${excludeBattlePass ? "active" : ""}`} type="button" aria-pressed={excludeBattlePass} onClick={() => onExcludeBattlePassChange(!excludeBattlePass)}><span aria-hidden="true" /><span><strong>排除战令精灵</strong><small>{excludeBattlePass ? "当前不参与统计与推荐" : "当前参与统计与推荐"}</small></span></button>
       </div>
       <div className="egg-group-filter-panel">
-        <div className="egg-group-filter-heading"><div><span>EGG GROUP INDEX</span><strong>按蛋组查看图鉴</strong></div><p><b>{visiblePets.length}</b> 只符合当前条件</p></div>
+        <div className="egg-group-filter-heading"><div><span>EGG GROUP INDEX</span><strong>按蛋组查看图鉴</strong></div><p><b>{visiblePets.length}</b> 只精灵符合当前筛选</p></div>
         <div className="egg-group-filter-list" role="group" aria-label="蛋组筛选">
           {(["all", ...EGG_GROUPS, "none"] as string[]).map((group) => {
             const count = group === "all" ? pets.length : pets.filter((pet) => group === "none" ? !pet.groups.length : pet.groups.includes(group)).length;
@@ -135,7 +135,7 @@ export function CollectionSection({ pets, owned, shinyCount, colorfulCount, comb
         </div>
       </div>
       <div className="series-filter-panel">
-        <div className="series-filter-heading"><div><span>PET TYPE INDEX</span><strong>按系别查看图鉴</strong></div><p>双系别精灵可被任一系别筛中</p></div>
+        <div className="series-filter-heading"><div><span>PET TYPE INDEX</span><strong>按系别查看图鉴</strong></div><p>双系别精灵会出现在两个所属系别下</p></div>
         <div className="series-filter-list" role="group" aria-label="系别筛选">
           {(["all", ...PET_SERIES] as string[]).map((series) => {
             const count = series === "all" ? pets.length : pets.filter((pet) => pet.series.includes(series)).length;
