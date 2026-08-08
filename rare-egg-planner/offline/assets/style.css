@@ -167,11 +167,17 @@ main { overflow: hidden; }
 .map-empty-state h3 { margin: 0; font-size: 22px; }
 .map-empty-state p { margin: 12px auto; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .map-empty-state a { color: var(--purple); font-size: 12px; font-weight: 800; }
-.plan-metrics { display: grid; grid-template-columns: repeat(4,1fr); border-top: 1px solid var(--line); }
-.plan-metrics div { padding: 18px 20px; border-right: 1px solid var(--line); }
-.plan-metrics div:last-child { border-right: 0; }
-.plan-metrics span { display: block; color: var(--muted); font-size: 10px; }
-.plan-metrics strong { display: block; margin-top: 5px; font: 800 24px/1 ui-monospace, monospace; }
+.plan-insights { display: grid; grid-template-columns: repeat(3,minmax(112px,.62fr)) minmax(280px,2.1fr); border-top: 1px solid var(--line); }
+.plan-insight { min-height: 82px; display: grid; align-content: center; gap: 7px; padding: 16px 19px; border-right: 1px solid var(--line); }
+.plan-insight:last-child { border-right: 0; }
+.plan-insight > span { display: block; color: var(--muted); font-size: 10px; }
+.plan-insight > strong { display: block; color: var(--ink); font: 800 23px/1 ui-monospace, monospace; }
+.plan-insight > strong small { color: #81798c; font-size: 12px; font-weight: 750; }
+.plan-insight-advice { position: relative; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; column-gap: 11px; padding-left: 17px; background: #fff8e7; }
+.plan-insight-advice::before { content: ""; grid-row: 1 / -1; align-self: center; width: 32px; height: 32px; border: 1px solid #e4c87e; border-radius: 11px; background: #f4c85e; box-shadow: inset 0 1px 0 rgba(255,255,255,.46); }
+.plan-insight-advice::after { content: ""; position: absolute; left: 28px; top: 50%; width: 8px; height: 5px; border-right: 2px solid #60450b; border-bottom: 2px solid #60450b; transform: translate(-50%,-65%) rotate(-45deg); }
+.plan-insight-advice > span { align-self: end; color: #7b6228; font-weight: 800; }
+.plan-insight-advice > strong { align-self: start; font: 760 11px/1.55 inherit; }
 
 .recommendation-panel { padding: 20px; display: flex; flex-direction: column; }
 .panel-title { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
@@ -374,9 +380,9 @@ footer a { margin-left: auto; color: var(--muted); font-size: 10px; }
   .gender-pin { right: 4px; }
   .nest-slot strong { font-size: 9px; }
   .nest-slot small { display: none; }
-  .plan-metrics { grid-template-columns: repeat(2,1fr); }
-  .plan-metrics div:nth-child(2) { border-right: 0; }
-  .plan-metrics div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .plan-insights { grid-template-columns: repeat(3,1fr); }
+  .plan-insight:nth-child(3) { border-right: 0; }
+  .plan-insight-advice { grid-column: 1 / -1; border-top: 1px solid var(--line); }
   .catalog-toolbar { grid-template-columns: 1fr; }
   .filter-group { overflow-x: auto; }
   .egg-group-filter-panel { grid-template-columns: 1fr; gap: 14px; }

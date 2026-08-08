@@ -40,9 +40,9 @@
   .gender-pin { right: 4px; }
   .nest-slot strong { font-size: 9px; }
   .nest-slot small { display: none; }
-  .plan-metrics { grid-template-columns: repeat(2,1fr); }
-  .plan-metrics div:nth-child(2) { border-right: 0; }
-  .plan-metrics div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .plan-insights { grid-template-columns: repeat(3,1fr); }
+  .plan-insight:nth-child(3) { border-right: 0; }
+  .plan-insight-advice { grid-column: 1 / -1; border-top: 1px solid var(--line); }
   .catalog-toolbar { grid-template-columns: 1fr; }
   .filter-group { overflow-x: auto; }
   .egg-group-filter-panel { grid-template-columns: 1fr; gap: 14px; }

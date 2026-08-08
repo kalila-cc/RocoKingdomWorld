@@ -9,6 +9,7 @@ import {
   slotPoint,
   type Focus,
   type Plan,
+  type RoadStep,
 } from "../planner-core";
 import { PetImage } from "./pet-image";
 
@@ -20,15 +21,28 @@ type PlannerSectionProps = {
   focus: Focus;
   seasonKeys: string[];
   maleCount: boolean;
+  nextStep?: RoadStep;
   onDecreaseNest: () => void;
   onIncreaseNest: () => void;
   onFocusChange: (focus: Focus) => void;
   onRefresh: () => void;
 };
 
-export function PlannerSection({ plan, nestCount, focus, seasonKeys, maleCount, onDecreaseNest, onIncreaseNest, onFocusChange, onRefresh }: PlannerSectionProps) {
+function improvementAdvice(plan: Plan, nextStep: RoadStep | undefined, maleCount: boolean) {
+  if (nextStep) {
+    const unlockCopy = nextStep.unlocks > 0 ? `，可再解锁 ${nextStep.unlocks} 个后续目标` : "，继续扩展同蛋组路线";
+    return `优先孵出 ${petLabel(nextStep.target)} 并保留${TARGET_LABEL[plan.kind]}公体，接入${nextStep.group}${unlockCopy}`;
+  }
+  if (!plan.slots.length) return maleCount ? "切换目标赛季，或补充能够连接新蛋组的珍稀母体" : "先登记一只可繁育的异色炫彩公体，系统才能生成覆盖路线";
+  if (plan.targetCount > 0 && plan.pairedMothers >= plan.targetCount) return "当前目标已经全部覆盖，按本轮摆法继续孵化即可";
+  return "当前可用亲本已充分利用；补充新的同蛋组珍稀公体可继续扩大覆盖";
+}
+
+export function PlannerSection({ plan, nestCount, focus, seasonKeys, maleCount, nextStep, onDecreaseNest, onIncreaseNest, onFocusChange, onRefresh }: PlannerSectionProps) {
   const activeKind = plan.kind;
   const motherKeys = Array.from(new Set(plan.edges.map((edge) => petKey(edge.mother.pet))));
+  const coverageLabel = plan.targetTier === "season-limited" ? "限时目标覆盖" : plan.targetTier === "permanent" ? "常驻目标覆盖" : `${TARGET_LABEL[plan.objective]}目标覆盖`;
+  const comboOpportunities = plan.kind === "combo" ? plan.pairedMothers : 0;
   return (
     <section className="planner-section" id="plan">
       <div className="section-heading solo"><div><p className="eyebrow">SMART NEST LAYOUT</p><h2>此刻最值得摆的窝</h2></div></div>
@@ -83,8 +97,11 @@ export function PlannerSection({ plan, nestCount, focus, seasonKeys, maleCount, 
             <div className="distance-key"><span /> 实线代表同蛋组且横、竖或斜角紧邻</div>
           </div>
 
-          <div className="plan-metrics">
-            <div><span>本轮目标母窝</span><strong>{plan.pairedMothers}</strong></div><div><span>有效配对连线</span><strong>{plan.edges.length}</strong></div><div><span>公体覆盖目标</span><strong>{plan.directCount}</strong></div><div><span>仍需解锁路线</span><strong>{plan.uncovered}</strong></div>
+          <div className="plan-insights" aria-label="本轮决策摘要">
+            <div className="plan-insight"><span>{coverageLabel}</span><strong>{plan.pairedMothers}<small> / {plan.targetCount}</small></strong></div>
+            <div className="plan-insight"><span>窝位利用</span><strong>{plan.slots.length}<small> / {nestCount}</small></strong></div>
+            <div className="plan-insight"><span>双特征机会</span><strong>{comboOpportunities}<small> 窝</small></strong></div>
+            <div className="plan-insight plan-insight-advice"><span>最大提升建议</span><strong>{improvementAdvice(plan, nextStep, maleCount)}</strong></div>
           </div>
         </article>
 

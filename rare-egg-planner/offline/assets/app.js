@@ -44,7 +44,9 @@
 
   function renderPlan(plan) {
     const kindLabel=TARGET_LABEL[plan.kind];
-    $("metricMothers").textContent=plan.pairedMothers;$("metricEdges").textContent=plan.edges.length;$("metricDirect").textContent=plan.directCount;$("metricLocked").textContent=plan.uncovered;
+    const nextStep=buildRoadmap(plan.kind,plan.objective)[0],coverageLabel=plan.targetTier==="season-limited"?"限时目标覆盖":plan.targetTier==="permanent"?"常驻目标覆盖":TARGET_LABEL[plan.objective]+"目标覆盖",comboOpportunities=plan.kind==="combo"?plan.pairedMothers:0;
+    let advice;if(nextStep){const unlockCopy=nextStep.unlocks>0?`，可再解锁 ${nextStep.unlocks} 个后续目标`:"，继续扩展同蛋组路线";advice=`优先孵出 ${petLabel(nextStep.target)} 并保留${kindLabel}公体，接入${nextStep.group}${unlockCopy}`;}else if(!plan.slots.length){advice=AUTO_PRIORITY.some((kind)=>maleParents(kind).length)?"切换目标赛季，或补充能够连接新蛋组的珍稀母体":"先登记一只可繁育的异色炫彩公体，系统才能生成覆盖路线";}else if(plan.targetCount>0&&plan.pairedMothers>=plan.targetCount){advice="当前目标已经全部覆盖，按本轮摆法继续孵化即可";}else{advice="当前可用亲本已充分利用；补充新的同蛋组珍稀公体可继续扩大覆盖";}
+    $("metricCoverageLabel").textContent=coverageLabel;$("metricCoverage").textContent=`${plan.pairedMothers} / ${plan.targetCount}`;$("metricUtilization").textContent=`${plan.slots.length} / ${state.nestCount}`;$("metricCombo").textContent=`${comboOpportunities} 窝`;$("metricAdvice").textContent=advice;
     $("recommendationScore").textContent=plan.recommendation?plan.recommendation+"%":"--";
     $("recommendationKind").textContent=plan.targetTier==="season-limited"?"限时异色优先":plan.targetTier==="permanent"?"常驻异色补全":kindLabel+"方案";
     $("planScore").setAttribute("aria-label","当前方案推荐度 "+plan.recommendation+"%");

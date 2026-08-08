@@ -39,6 +39,7 @@ export default function Home() {
         focus={focus}
         seasonKeys={SEASON_KEYS}
         maleCount={maleCount}
+        nextStep={roadmap[0]}
         onDecreaseNest={() => setNestCount((value) => Math.max(2, value - 1))}
         onIncreaseNest={() => setNestCount((value) => Math.min(10, value + 1))}
         onFocusChange={setFocus}

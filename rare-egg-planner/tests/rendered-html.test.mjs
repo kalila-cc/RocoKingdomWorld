@@ -124,9 +124,16 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(html, /id="eggGroupFilter"/);
   assert.match(html, /id="eggGroupResult"/);
   assert.match(html, /按蛋组查看图鉴/);
+  assert.match(html, /本轮决策摘要/);
+  assert.match(html, /窝位利用/);
+  assert.match(html, /双特征机会/);
+  assert.match(html, /最大提升建议/);
+  assert.doesNotMatch(html, /本轮目标母窝|有效配对连线|公体覆盖目标|仍需解锁路线/);
   assert.match(app, /PETS\.length/);
   assert.match(app, /SEASON_KEYS/);
   assert.match(app, /IntersectionObserver/);
+  assert.match(app, /metricAdvice/);
+  assert.match(app, /可再解锁/);
   assert.match(updater, /api\/shiny-transfer-planner/);
   assert.match(updater, /api\/shiny-transfer-summary/);
   assert.match(updater, /action=ask/);
@@ -152,6 +159,8 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(style, /\.side-nav a\.active::after\s*\{[^}]*opacity:\s*1[^}]*scaleX\(1\)/s);
   assert.match(style, /\.save-actions button\s*\{[^}]*min-width:\s*96px[^}]*white-space:\s*nowrap/s);
   assert.match(style, /\.back-to-top\s*\{[^}]*position:\s*fixed[^}]*min-height:\s*52px[^}]*box-shadow:/s);
+  assert.match(style, /\.plan-insights\s*\{[^}]*grid-template-columns:\s*repeat\(3,[^}]*minmax\(280px,2\.1fr\)/s);
+  assert.match(style, /\.plan-insight-advice\s*\{[^}]*background:\s*#fff8e7/s);
   assert.match(style, /\.planner-section, \.collection-section, \.roadmap-section, \.rules-section\s*\{[^}]*background:\s*var\(--paper\)/s);
   assert.doesNotMatch(style, /\.planner-section, \.collection-section, \.roadmap-section, \.rules-section\s*\{[^}]*background:\s*linear-gradient/s);
   assert.match(style, /\.pet-info h3\s*\{[^}]*font-size:\s*16px/s);

@@ -43,7 +43,7 @@
           <button class="refresh-button" id="refreshPlan" type="button">换一组同分方案 ↻</button>
         </div>
         <div class="nest-map empty" id="nestMap"><div class="map-grid"></div><div class="distance-key"><span></span> 实线代表同蛋组且横、竖或斜角紧邻</div></div>
-        <div class="plan-metrics"><div><span>本轮目标母窝</span><strong id="metricMothers">0</strong></div><div><span>有效配对连线</span><strong id="metricEdges">0</strong></div><div><span>公体覆盖目标</span><strong id="metricDirect">0</strong></div><div><span>仍需解锁路线</span><strong id="metricLocked">0</strong></div></div>
+        <div class="plan-insights" aria-label="本轮决策摘要"><div class="plan-insight"><span id="metricCoverageLabel">目标覆盖</span><strong id="metricCoverage">0 / 0</strong></div><div class="plan-insight"><span>窝位利用</span><strong id="metricUtilization">0 / 10</strong></div><div class="plan-insight"><span>双特征机会</span><strong id="metricCombo">0 窝</strong></div><div class="plan-insight plan-insight-advice"><span>最大提升建议</span><strong id="metricAdvice">登记图鉴后生成针对性建议</strong></div></div>
       </article>
       <aside class="recommendation-panel"><div class="panel-title"><span>本轮蛋单</span><small id="panelTarget">蛋种跟随母体</small></div><div class="egg-list" id="eggList"><p class="panel-empty">登记图鉴后，具体蛋单会出现在这里。</p></div><div class="tip-box"><span>!</span><p><strong>摆放前确认：</strong> 母位若标为异色或炫彩，表示系统正在利用你登记的目标母体，与另一特征的公体合成异色炫彩路线。</p></div></aside>
     </div>
