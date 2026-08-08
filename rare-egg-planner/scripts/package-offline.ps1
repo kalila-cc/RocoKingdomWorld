@@ -4,7 +4,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 if ([string]::IsNullOrWhiteSpace($PackageName)) {
-  $PackageName = (@(0x6D1B, 0x514B, 0x5F02, 0x8272, 0x5B75, 0x86CB, 0x89C4, 0x5212, 0x53F0) | ForEach-Object { [char]$_ }) -join ''
+  $PackageName = "roco-rare-egg-planner"
 }
 $projectRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot)).TrimEnd('\')
 $sourceRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot "offline")).TrimEnd('\')

@@ -72,7 +72,7 @@ export function usePlannerProgress() {
     const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "洛克异色炫彩孵蛋进度.json";
+    anchor.download = "roco-rare-egg-progress.json";
     anchor.click();
     URL.revokeObjectURL(url);
     setToast("进度文件已导出");

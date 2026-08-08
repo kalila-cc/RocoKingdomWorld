@@ -61,7 +61,7 @@ test("offline package is self-contained and data-complete", async () => {
     readFile(new URL("../scripts/updater/20-egg-source.ps1", import.meta.url), "utf8"),
     readFile(new URL("../scripts/updater/30-database-builder.ps1", import.meta.url), "utf8"),
     readFile(new URL("../scripts/updater/40-install.ps1", import.meta.url), "utf8"),
-    readFile(new URL("../offline/更新精灵数据库.bat", import.meta.url), "utf8"),
+    readFile(new URL("../offline/update-database.bat", import.meta.url), "utf8"),
     readdir(new URL("../offline/assets/pets/", import.meta.url)),
     readFile(new URL("../offline/assets/traits/mark-shiny.png", import.meta.url)),
     readFile(new URL("../offline/assets/traits/mark-colorful.png", import.meta.url)),
@@ -76,6 +76,7 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(app, /roco-rare-nest-planner-v2/);
   assert.match(app, /roco-shiny-nest-planner-v1/);
   assert.match(app, /version:4/);
+  assert.match(app, /roco-rare-egg-progress\.json/);
   assert.match(app, /window\.ROCO_PLANNER/);
   assert.doesNotMatch(app, /function layoutScore/);
   assert.doesNotMatch(app, /function makePlan/);
@@ -140,6 +141,8 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(updater, /backup/);
   assert.match(updater, /CheckOnly/);
   assert.match(launcher, /update-pet-database\.ps1/);
+  const offlinePaths = await readdir(new URL("../offline/", import.meta.url), { recursive: true });
+  assert.ok(offlinePaths.every((path) => /^[\x00-\x7F]+$/.test(path)), "离线包内的目录和文件名必须全部使用 ASCII");
   assert.match(style, /\.side-nav\s*\{[^}]*width:\s*72px/s);
   assert.match(style, /\.side-nav a\s*\{[^}]*min-height:\s*58px/s);
   assert.match(style, /\.planner-section, \.collection-section, \.roadmap-section, \.rules-section\s*\{[^}]*background:\s*var\(--paper\)/s);

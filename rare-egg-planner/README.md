@@ -80,7 +80,7 @@
 
 1. 下载或克隆本仓库；
 2. 进入 [`offline/`](./offline/) 目录；
-3. Windows 用户双击 `打开珍稀孵蛋规划台.bat`；
+3. Windows 用户双击 `open-planner.bat`；
 4. 也可以直接使用浏览器打开 `offline/index.html`。
 
 ```bash
@@ -95,7 +95,7 @@ macOS 和 Linux 用户可直接打开 `index.html`。离线页面本身不依赖
 Windows 用户可以双击：
 
 ```text
-offline/更新精灵数据库.bat
+offline/update-database.bat
 ```
 
 更新器会读取 BWiki 异色形态资料和公开蛋组接口，先展示当前数据库与远端数据摘要，再由用户确认是否安装。已有登记记录会按精灵卡片键继续保留。
