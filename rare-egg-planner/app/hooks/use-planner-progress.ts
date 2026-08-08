@@ -6,7 +6,7 @@ import { FLAG, OWN, migrateOwnedMap, petKey, type Focus, type OwnedMap } from ".
 
 const STORAGE_KEY = "roco-rare-nest-planner-v2";
 const LEGACY_STORAGE_KEY = "roco-shiny-nest-planner-v1";
-const PROGRESS_VERSION = 4;
+const PROGRESS_VERSION = 5;
 const PET_MAP = new Map(PETS.map((pet) => [petKey(pet), pet]));
 
 type StoredProgress = {
@@ -14,12 +14,14 @@ type StoredProgress = {
   owned?: OwnedMap;
   nestCount?: number;
   focus?: Focus;
+  excludeBattlePass?: boolean;
 };
 
 export function usePlannerProgress() {
   const [owned, setOwned] = useState<OwnedMap>({});
   const [nestCount, setNestCount] = useState(10);
   const [focus, setFocus] = useState<Focus>("all");
+  const [excludeBattlePass, setExcludeBattlePass] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [saveStatus, setSaveStatus] = useState("正在读取本机记录…");
   const [toast, setToast] = useState("");
@@ -33,6 +35,7 @@ export function usePlannerProgress() {
         if (parsed.owned) setOwned(migrateOwnedMap(PETS, parsed.owned));
         if (parsed.nestCount) setNestCount(Math.min(10, Math.max(2, parsed.nestCount)));
         if (parsed.focus) setFocus(parsed.focus);
+        if (typeof parsed.excludeBattlePass === "boolean") setExcludeBattlePass(parsed.excludeBattlePass);
       }
       setSaveStatus("更改后已自动保存到本机");
     } catch {
@@ -46,13 +49,13 @@ export function usePlannerProgress() {
     if (!hydrated) return;
     /* eslint-disable react-hooks/set-state-in-effect -- save status reflects whether the external browser storage write succeeded. */
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, savedAt: new Date().toISOString() }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, excludeBattlePass, savedAt: new Date().toISOString() }));
       setSaveStatus("更改后已自动保存到本机");
     } catch {
       setSaveStatus("本机存储不可用，请导出进度备份");
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [owned, nestCount, focus, hydrated]);
+  }, [owned, nestCount, focus, excludeBattlePass, hydrated]);
 
   useEffect(() => {
     if (!toast) return;
@@ -68,7 +71,7 @@ export function usePlannerProgress() {
   }
 
   function exportProgress() {
-    const payload = JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, exportedAt: new Date().toISOString() }, null, 2);
+    const payload = JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, excludeBattlePass, exportedAt: new Date().toISOString() }, null, 2);
     const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -89,6 +92,7 @@ export function usePlannerProgress() {
         setOwned(migrateOwnedMap(PETS, payload.owned));
         if (payload.nestCount) setNestCount(Math.min(10, Math.max(2, payload.nestCount)));
         if (payload.focus) setFocus(payload.focus);
+        if (typeof payload.excludeBattlePass === "boolean") setExcludeBattlePass(payload.excludeBattlePass);
         setToast("进度已恢复");
       } catch {
         setToast("无法识别这个进度文件");
@@ -110,6 +114,8 @@ export function usePlannerProgress() {
     setNestCount,
     focus,
     setFocus,
+    excludeBattlePass,
+    setExcludeBattlePass,
     saveStatus,
     toast,
     toggleOwned,

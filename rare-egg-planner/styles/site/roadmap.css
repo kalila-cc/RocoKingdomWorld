@@ -1,17 +1,21 @@
 .roadmap-section { background: var(--paper); }
+.section-heading.compact { display: grid; grid-template-columns: minmax(0,1fr) minmax(360px,620px); align-items: end; }
 .section-heading.compact h2 { font-size: clamp(34px, 3.4vw, 52px); }
-.section-heading.compact > p { color: var(--muted); }
+.section-heading.compact > p { width: auto; max-width: 620px; justify-self: end; color: var(--muted); text-wrap: pretty; }
 .route-track { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
-.route-step { min-height: 230px; padding: 18px; border: 1px solid rgba(57,43,135,.14); background: rgba(255,255,255,.7); border-radius: 18px; position: relative; }
-.route-index { font: 800 11px/1 ui-monospace, monospace; color: var(--purple); }
-.route-pair { display: flex; align-items: center; gap: 10px; margin: 22px 0 14px; }
+.route-step { min-height: 230px; display: flex; flex-direction: column; justify-content: center; padding: 34px 20px 24px; border: 1px solid rgba(57,43,135,.14); background: rgba(255,255,255,.7); border-radius: 18px; position: relative; }
+.route-index { position: absolute; top: 18px; left: 18px; font: 800 11px/1 ui-monospace, monospace; color: var(--purple); }
+.route-pair { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 16px; }
 .route-pair > span { color: #a29bb5; }
-.route-pair > div { width: 55px; height: 55px; display: grid; place-items: center; position: relative; border-radius: 17px; background: white; }
-.route-pair img { width: 50px; height: 50px; object-fit: contain; }
+.route-pet-avatar { width: 72px; height: 72px; display: grid; place-items: center; position: relative; overflow: visible; border: 1px solid #e1dbd0; border-radius: 18px; background: #f0ecff; box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 8px 18px rgba(47,35,89,.08); }
+.route-pet-avatar.route-mother { background: #f5e4e7; }
+.route-pet-avatar.variant-colorful { border-color: #e5d18e; background: #fff3ca; box-shadow: inset 0 1px 0 rgba(255,255,255,.82), 0 8px 18px rgba(91,68,22,.08); }
+.route-pet-avatar.variant-combo { border-color: #b9adeb; background: #ddd6ff; box-shadow: inset 4px 0 0 var(--purple), inset 0 1px 0 rgba(255,255,255,.72), 0 9px 19px rgba(57,43,135,.1); }
+.route-pair img { width: 64px; height: 64px; object-fit: contain; transform: translate3d(1px,2px,0); filter: saturate(1.08) drop-shadow(0 6px 6px rgba(54,43,96,.14)); }
 .route-pair small { position: absolute; right: -5px; bottom: -5px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 2px solid #f8f6ff; border-radius: 8px; background: var(--blue); color: white; font: 850 12px/1 Arial, sans-serif; text-align: center; white-space: nowrap; }
 .route-pair > div:last-child small { background: var(--coral); }
-.route-step > strong { display: block; font-size: 13px; }
-.route-step > p { margin: 8px 0 0; color: var(--muted); font-size: 10px; }
+.route-step > strong { display: block; width: 100%; font-size: 13px; text-align: center; text-wrap: balance; }
+.route-step > p { width: 100%; margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; text-align: center; text-wrap: pretty; }
 .route-empty { min-height: 145px; display: flex; align-items: center; gap: 22px; padding: 24px; border: 1px dashed rgba(57,43,135,.25); border-radius: 18px; }
 .route-empty div { width: 76px; height: 76px; display: grid; place-items: center; background: var(--purple); color: white; border-radius: 24px; position: relative; }
 .route-empty div span { position: absolute; top: 9px; left: 10px; font: 700 9px/1 ui-monospace,monospace; opacity: .65; }

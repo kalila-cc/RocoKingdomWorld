@@ -15,8 +15,12 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
   }
 
   $wikiFormsByRoot = @{}
+  $wikiByName = @{}
   foreach ($familyGroup in @($WikiEntries | Group-Object root)) {
     $wikiFormsByRoot[$familyGroup.Name] = @($familyGroup.Group | Sort-Object @{ Expression = { Get-StageRank $_.stage } }, name)
+  }
+  foreach ($wikiEntry in $WikiEntries) {
+    $wikiByName[[string]$wikiEntry.name] = $wikiEntry
   }
 
   $summaryImageMap = @{}
@@ -58,6 +62,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
       $petGroups += [string]$groups[$groupIndex]
     }
     $catalogRecord = if ($EggCatalog.ContainsKey($name)) { $EggCatalog[$name] } else { $null }
+    $wikiRecord = if ($wikiByName.ContainsKey($name)) { $wikiByName[$name] } else { $null }
     $family = if ($catalogRecord -and $catalogRecord.root) { [string]$catalogRecord.root } else { $name }
     $summaryImageUrl = if ($summaryImageMap.ContainsKey($name)) { [string]$summaryImageMap[$name] } elseif ($catalogRecord -and $catalogRecord.avatar) { [string]$catalogRecord.avatar } else { "" }
     if ([string]::IsNullOrWhiteSpace($summaryImageUrl)) { throw "缺少精灵头像地址：$name" }
@@ -79,6 +84,15 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
       $variantImageUrl = if (-not [string]::IsNullOrWhiteSpace([string]$variant.avatar)) { [string]$variant.avatar } else { $summaryImageUrl }
       $imageMap[$key] = $variantImageUrl
       $legacyKey = if (-not $splitVariants.Count -or $baseId -eq $summaryBaseId) { $name } else { "" }
+      $petSeries = if ($variant.PSObject.Properties.Name -contains "series" -and @($variant.series).Count) {
+        @($variant.series)
+      } elseif ($catalogRecord -and @($catalogRecord.series).Count) {
+        @($catalogRecord.series)
+      } elseif ($wikiRecord -and @($wikiRecord.series).Count) {
+        @($wikiRecord.series)
+      } else {
+        @("待核对")
+      }
       $basePets += [pscustomobject][ordered]@{
         id = -1
         key = $key
@@ -88,6 +102,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
         legacyKey = $legacyKey
         season = [string]$seasons[$seasonIndex]
         groups = @($petGroups)
+        series = @($petSeries)
         flags = [int]$row[3]
         family = $family
         stage = "孵蛋目标"
@@ -126,6 +141,15 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
     $familyRecord = if ($catalogByRoot.ContainsKey($entry.root)) { $catalogByRoot[$entry.root] } else { $null }
     $groupSource = if ($exactRecord) { $exactRecord } else { $familyRecord }
     $petGroups = if ($groupSource) { @($groupSource.groups) } else { @() }
+    $petSeries = if ($exactRecord -and @($exactRecord.series).Count) {
+      @($exactRecord.series)
+    } elseif (@($entry.series).Count) {
+      @($entry.series)
+    } elseif ($familyRecord -and @($familyRecord.series).Count) {
+      @($familyRecord.series)
+    } else {
+      @("待核对")
+    }
     $genderFlags = if ($genderByRoot.ContainsKey($entry.root)) { [int]$genderByRoot[$entry.root] } else { 0 }
     if ($exactRecord -and $exactRecord.canHatch -and $petGroups.Count) {
       $flags = 1 -bor $genderFlags
@@ -162,6 +186,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
       legacyKey = $key
       season = $season
       groups = @($petGroups)
+      series = @($petSeries)
       flags = $flags
       family = [string]$entry.root
       stage = [string]$entry.stage
@@ -239,6 +264,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
       availability = $availability
       availabilityReason = $availabilityReason
       groups = @($pet.groups)
+      series = @($pet.series)
       flags = $pet.flags
       family = $pet.family
       stage = $pet.stage
@@ -253,17 +279,27 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
 
   if (-not ($pets.name -contains "白金独角兽")) { throw "BWiki 异色清单未能补入白金独角兽。" }
   if ($pets.Count -lt $rows.Count) { throw "合并后的精灵数量异常：$($pets.Count)" }
+  $unresolvedSeries = @($pets | Where-Object { @($_.series) -contains "待核对" })
+  if ($unresolvedSeries.Count) {
+    throw "以下精灵缺少系列资料：$(@($unresolvedSeries.name) -join '、')"
+  }
 
+  $seriesOrder = @("普通", "火", "水", "草", "电", "冰", "武", "毒", "地", "萌", "翼", "光", "恶", "幽", "幻", "机械", "虫", "龙", "待核对")
+  $seriesInDatabase = @($pets | ForEach-Object { @($_.series) } | Select-Object -Unique)
+  $series = @($seriesOrder | Where-Object { $seriesInDatabase -contains $_ })
+  $series += @($seriesInDatabase | Where-Object { $seriesOrder -notcontains $_ } | Sort-Object)
   $generatedAt = (Get-Date).ToUniversalTime().ToString("s") + "Z"
   $database = [ordered]@{
-    schemaVersion = 6
+    schemaVersion = 7
     pets = $pets
+    series = @($series)
     updatedAt = $generatedAt
     source = [ordered]@{
       planner = $PlannerUrl
       summary = $SummaryUrl
       wiki = $WikiApiUrl
       eggGroups = $EggApiBaseUrl.TrimEnd('/') + "/egg-groups"
+      series = "egg-group-members.type_name; fallback BWiki 主属性/副属性"
       targetScope = "planner-shiny-final + bwiki-shiny-final + regional-final-variants + form-inheritance-overrides"
       priorityPolicy = "season-limited-shiny-first; permanent-shiny-after-limited-or-when-limited-is-not-currently-actionable"
       plannerGeneratedAt = [string]$Planner.metadata.generated_at
@@ -278,6 +314,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
     Database = $database
     ImageMap = $imageMap
     Groups = $groups
+    Series = $series
     Seasons = $seasons
     WikiEntryCount = @($WikiEntries).Count
     WikiTargetCount = @($wikiTargets).Count
@@ -291,6 +328,7 @@ function Write-ProjectData([string]$ProjectRoot, $Database, [string]$ImageDirect
   if (-not (Test-Path -LiteralPath (Split-Path -Parent $appDataPath))) { return }
 
   $groupsJson = $Groups | ConvertTo-Json -Depth 4
+  $seriesJson = $Database.series | ConvertTo-Json -Depth 4
   $petsJson = $Database.pets | ConvertTo-Json -Depth 12
   $typescript = @"
 export type Pet = {
@@ -304,6 +342,7 @@ export type Pet = {
   availability: "season-limited" | "permanent";
   availabilityReason: string;
   groups: string[];
+  series: string[];
   flags: number;
   family: string;
   stage: string;
@@ -316,6 +355,8 @@ export type Pet = {
 };
 
 export const EGG_GROUPS = $groupsJson as const;
+
+export const PET_SERIES = $seriesJson as const;
 
 export const PETS: Pet[] = $petsJson;
 

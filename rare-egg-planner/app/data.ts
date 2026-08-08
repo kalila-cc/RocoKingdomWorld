@@ -9,6 +9,7 @@ export type Pet = {
   availability: "season-limited" | "permanent";
   availabilityReason: string;
   groups: string[];
+  series: string[];
   flags: number;
   family: string;
   stage: string;
@@ -37,6 +38,27 @@ export const EGG_GROUPS = [
     "机械组"
 ] as const;
 
+export const PET_SERIES = [
+    "普通",
+    "火",
+    "水",
+    "草",
+    "电",
+    "冰",
+    "武",
+    "毒",
+    "地",
+    "萌",
+    "翼",
+    "光",
+    "恶",
+    "幽",
+    "幻",
+    "机械",
+    "虫",
+    "龙"
+] as const;
+
 export const PETS: Pet[] = [
     {
         "id":  0,
@@ -51,6 +73,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "植物组",
                        "软体组"
+                   ],
+        "series":  [
+                       "草"
                    ],
         "flags":  1,
         "family":  "伊贝儿",
@@ -89,6 +114,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "天空组"
                    ],
+        "series":  [
+                       "普通"
+                   ],
         "flags":  1,
         "family":  "公平鸽",
         "stage":  "孵蛋目标",
@@ -123,6 +151,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "海洋组"
                    ],
+        "series":  [
+                       "水",
+                       "电"
+                   ],
         "flags":  1,
         "family":  "双灯鱼",
         "stage":  "孵蛋目标",
@@ -154,6 +186,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组",
                        "两栖组"
+                   ],
+        "series":  [
+                       "水",
+                       "萌"
                    ],
         "flags":  1,
         "family":  "加油海葵",
@@ -204,6 +240,10 @@ export const PETS: Pet[] = [
                        "海洋组",
                        "巨灵组"
                    ],
+        "series":  [
+                       "水",
+                       "毒"
+                   ],
         "flags":  1,
         "family":  "海盔虫",
         "stage":  "孵蛋目标",
@@ -239,6 +279,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "海洋组",
                        "巨灵组"
+                   ],
+        "series":  [
+                       "水",
+                       "毒"
                    ],
         "flags":  1,
         "family":  "海盔虫",
@@ -276,6 +320,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组",
                        "植物组"
+                   ],
+        "series":  [
+                       "幽",
+                       "草"
                    ],
         "flags":  1,
         "family":  "蜜果骸",
@@ -329,6 +377,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组"
                    ],
+        "series":  [
+                       "恶"
+                   ],
         "flags":  1,
         "family":  "卡波",
         "stage":  "孵蛋目标",
@@ -376,6 +427,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组"
                    ],
+        "series":  [
+                       "恶",
+                       "翼"
+                   ],
         "flags":  1,
         "family":  "恶魔叮",
         "stage":  "孵蛋目标",
@@ -422,6 +477,9 @@ export const PETS: Pet[] = [
         "availabilityReason":  "S2狂欢怪谈赛季限时异色",
         "groups":  [
                        "妖精组"
+                   ],
+        "series":  [
+                       "幽"
                    ],
         "flags":  1,
         "family":  "咕咕帽",
@@ -471,6 +529,9 @@ export const PETS: Pet[] = [
                        "妖精组",
                        "大地组"
                    ],
+        "series":  [
+                       "毒"
+                   ],
         "flags":  1,
         "family":  "嘟嘟煲",
         "stage":  "孵蛋目标",
@@ -519,6 +580,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组"
                    ],
+        "series":  [
+                       "毒",
+                       "普通"
+                   ],
         "flags":  1,
         "family":  "栗鼠",
         "stage":  "孵蛋目标",
@@ -562,6 +627,9 @@ export const PETS: Pet[] = [
                        "魔力组",
                        "巨灵组"
                    ],
+        "series":  [
+                       "幽"
+                   ],
         "flags":  1,
         "family":  "空空颅",
         "stage":  "孵蛋目标",
@@ -595,6 +663,9 @@ export const PETS: Pet[] = [
         "availabilityReason":  "S1暗夜拾光赛季限时异色",
         "groups":  [
                        "植物组"
+                   ],
+        "series":  [
+                       "草"
                    ],
         "flags":  1,
         "family":  "奇丽草",
@@ -634,6 +705,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组",
                        "拟人组"
+                   ],
+        "series":  [
+                       "恶"
                    ],
         "flags":  1,
         "family":  "小丑豆豆",
@@ -691,6 +765,10 @@ export const PETS: Pet[] = [
                        "妖精组",
                        "软体组"
                    ],
+        "series":  [
+                       "电",
+                       "幻"
+                   ],
         "flags":  1,
         "family":  "粉粉星",
         "stage":  "孵蛋目标",
@@ -739,6 +817,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组"
                    ],
+        "series":  [
+                       "火",
+                       "冰"
+                   ],
         "flags":  1,
         "family":  "灵狐",
         "stage":  "孵蛋目标",
@@ -782,6 +864,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组",
                        "机械组"
+                   ],
+        "series":  [
+                       "机械"
                    ],
         "flags":  1,
         "family":  "小鼓象",
@@ -828,6 +913,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组",
                        "拟人组"
+                   ],
+        "series":  [
+                       "幻"
                    ],
         "flags":  1,
         "family":  "牵线木偶",
@@ -884,6 +972,10 @@ export const PETS: Pet[] = [
                        "植物组",
                        "妖精组"
                    ],
+        "series":  [
+                       "幽",
+                       "草"
+                   ],
         "flags":  1,
         "family":  "幽影树",
         "stage":  "孵蛋目标",
@@ -935,6 +1027,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组",
                        "拟人组"
+                   ],
+        "series":  [
+                       "萌",
+                       "毒"
                    ],
         "flags":  1,
         "family":  "蝴蝶陶陶",
@@ -989,6 +1085,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组"
                    ],
+        "series":  [
+                       "恶"
+                   ],
         "flags":  1,
         "family":  "恶魔狼",
         "stage":  "孵蛋目标",
@@ -1031,6 +1130,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "天空组"
                    ],
+        "series":  [
+                       "翼"
+                   ],
         "flags":  1,
         "family":  "斑斑",
         "stage":  "孵蛋目标",
@@ -1066,6 +1168,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组",
                        "巨灵组"
+                   ],
+        "series":  [
+                       "冰",
+                       "幻"
                    ],
         "flags":  1,
         "family":  "月牙雪熊",
@@ -1110,6 +1216,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "拟人组",
                        "妖精组"
+                   ],
+        "series":  [
+                       "恶"
                    ],
         "flags":  1,
         "family":  "小夜",
@@ -1167,6 +1276,9 @@ export const PETS: Pet[] = [
                        "植物组",
                        "妖精组"
                    ],
+        "series":  [
+                       "草"
+                   ],
         "flags":  1,
         "family":  "格兰种子",
         "stage":  "孵蛋目标",
@@ -1221,6 +1333,10 @@ export const PETS: Pet[] = [
                        "天空组",
                        "拟人组"
                    ],
+        "series":  [
+                       "火",
+                       "武"
+                   ],
         "flags":  1,
         "family":  "可立鸡",
         "stage":  "孵蛋目标",
@@ -1266,6 +1382,10 @@ export const PETS: Pet[] = [
         "availabilityReason":  "S3铅字幻梦赛季限时异色",
         "groups":  [
                        "妖精组"
+                   ],
+        "series":  [
+                       "火",
+                       "光"
                    ],
         "flags":  1,
         "family":  "守夜烛",
@@ -1315,6 +1435,10 @@ export const PETS: Pet[] = [
                        "两栖组",
                        "拟人组"
                    ],
+        "series":  [
+                       "水",
+                       "武"
+                   ],
         "flags":  1,
         "family":  "十字蝌蚪",
         "stage":  "孵蛋目标",
@@ -1356,6 +1480,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "植物组",
                        "拟人组"
+                   ],
+        "series":  [
+                       "草",
+                       "火"
                    ],
         "flags":  1,
         "family":  "苞米仔",
@@ -1404,6 +1532,10 @@ export const PETS: Pet[] = [
                        "机械组",
                        "魔力组"
                    ],
+        "series":  [
+                       "火",
+                       "毒"
+                   ],
         "flags":  1,
         "family":  "烟花团",
         "stage":  "孵蛋目标",
@@ -1438,6 +1570,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "昆虫组",
                        "植物组"
+                   ],
+        "series":  [
+                       "火",
+                       "草"
                    ],
         "flags":  1,
         "family":  "柴渣虫",
@@ -1477,6 +1613,10 @@ export const PETS: Pet[] = [
         "groups":  [
 
                    ],
+        "series":  [
+                       "火",
+                       "龙"
+                   ],
         "flags":  18,
         "family":  "爆焰仔",
         "stage":  "孵蛋目标",
@@ -1506,6 +1646,10 @@ export const PETS: Pet[] = [
         "availabilityReason":  "S1暗夜拾光赛季限时异色",
         "groups":  [
                        "动物组"
+                   ],
+        "series":  [
+                       "冰",
+                       "地"
                    ],
         "flags":  1,
         "family":  "呼呼猪",
@@ -1549,6 +1693,9 @@ export const PETS: Pet[] = [
         "groups":  [
 
                    ],
+        "series":  [
+                       "光"
+                   ],
         "flags":  18,
         "family":  "犀角鸟",
         "stage":  "孵蛋目标",
@@ -1580,6 +1727,10 @@ export const PETS: Pet[] = [
         "groups":  [
 
                    ],
+        "series":  [
+                       "幻",
+                       "机械"
+                   ],
         "flags":  18,
         "family":  "足尖元件",
         "stage":  "孵蛋目标",
@@ -1609,6 +1760,10 @@ export const PETS: Pet[] = [
         "availabilityReason":  "S3铅字幻梦赛季限时异色",
         "groups":  [
                        "妖精组"
+                   ],
+        "series":  [
+                       "萌",
+                       "武"
                    ],
         "flags":  1,
         "family":  "稻草人",
@@ -1657,6 +1812,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "昆虫组"
                    ],
+        "series":  [
+                       "恶",
+                       "光"
+                   ],
         "flags":  1,
         "family":  "嗜光嗡嗡",
         "stage":  "孵蛋目标",
@@ -1688,6 +1847,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "机械组",
                        "拟人组"
+                   ],
+        "series":  [
+                       "机械"
                    ],
         "flags":  1,
         "family":  "机械方方",
@@ -1733,6 +1895,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组",
                        "天空组"
+                   ],
+        "series":  [
+                       "幻"
                    ],
         "flags":  1,
         "family":  "粉星仔",
@@ -1787,6 +1952,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组",
                        "妖精组"
+                   ],
+        "series":  [
+                       "火",
+                       "萌"
                    ],
         "flags":  1,
         "family":  "治愈兔",
@@ -1850,6 +2019,10 @@ export const PETS: Pet[] = [
                        "天空组",
                        "拟人组"
                    ],
+        "series":  [
+                       "火",
+                       "武"
+                   ],
         "flags":  1,
         "family":  "可立鸡",
         "stage":  "孵蛋目标",
@@ -1896,6 +2069,10 @@ export const PETS: Pet[] = [
         "groups":  [
 
                    ],
+        "series":  [
+                       "光",
+                       "虫"
+                   ],
         "flags":  18,
         "family":  "绒绒",
         "stage":  "孵蛋目标",
@@ -1927,6 +2104,9 @@ export const PETS: Pet[] = [
         "groups":  [
 
                    ],
+        "series":  [
+                       "机械"
+                   ],
         "flags":  18,
         "family":  "咬咬小子",
         "stage":  "孵蛋目标",
@@ -1957,6 +2137,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "昆虫组",
                        "拟人组"
+                   ],
+        "series":  [
+                       "虫",
+                       "草"
                    ],
         "flags":  1,
         "family":  "小草虫",
@@ -2000,6 +2184,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "植物组"
                    ],
+        "series":  [
+                       "萌"
+                   ],
         "flags":  1,
         "family":  "菊花梨",
         "stage":  "孵蛋目标",
@@ -2035,6 +2222,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组",
                        "天空组"
+                   ],
+        "series":  [
+                       "幻",
+                       "幽"
                    ],
         "flags":  1,
         "family":  "粉星仔",
@@ -2089,6 +2280,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "机械组"
                    ],
+        "series":  [
+                       "机械",
+                       "火"
+                   ],
         "flags":  1,
         "family":  "贝瑟",
         "stage":  "孵蛋目标",
@@ -2122,6 +2317,9 @@ export const PETS: Pet[] = [
         "availabilityReason":  "S3铅字幻梦赛季限时异色",
         "groups":  [
                        "动物组"
+                   ],
+        "series":  [
+                       "地"
                    ],
         "flags":  1,
         "family":  "地鼠",
@@ -2166,6 +2364,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组"
                    ],
+        "series":  [
+                       "地"
+                   ],
         "flags":  1,
         "family":  "地鼠",
         "stage":  "孵蛋目标",
@@ -2208,6 +2409,9 @@ export const PETS: Pet[] = [
         "availabilityReason":  "S1暗夜拾光赛季限时异色",
         "groups":  [
                        "妖精组"
+                   ],
+        "series":  [
+                       "电"
                    ],
         "flags":  1,
         "family":  "拉特",
@@ -2256,6 +2460,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组"
                    ],
+        "series":  [
+                       "火"
+                   ],
         "flags":  1,
         "family":  "火红尾",
         "stage":  "孵蛋目标",
@@ -2298,6 +2505,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "妖精组",
                        "拟人组"
+                   ],
+        "series":  [
+                       "冰",
+                       "萌"
                    ],
         "flags":  5,
         "family":  "大耳帽兜",
@@ -2355,6 +2566,9 @@ export const PETS: Pet[] = [
         "groups":  [
 
                    ],
+        "series":  [
+                       "冰"
+                   ],
         "flags":  18,
         "family":  "小雪人",
         "stage":  "孵蛋目标",
@@ -2385,6 +2599,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组",
                        "大地组"
+                   ],
+        "series":  [
+                       "电",
+                       "光"
                    ],
         "flags":  1,
         "family":  "炫光迪迪",
@@ -2429,6 +2647,10 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组",
                        "机械组"
+                   ],
+        "series":  [
+                       "普通",
+                       "机械"
                    ],
         "flags":  1,
         "family":  "猴麦仔",
@@ -2475,6 +2697,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "天空组"
                    ],
+        "series":  [
+                       "翼"
+                   ],
         "flags":  1,
         "family":  "小鹬",
         "stage":  "孵蛋目标",
@@ -2512,6 +2737,10 @@ export const PETS: Pet[] = [
                        "海洋组",
                        "龙组"
                    ],
+        "series":  [
+                       "水",
+                       "龙"
+                   ],
         "flags":  1,
         "family":  "豆丁鱼",
         "stage":  "孵蛋目标",
@@ -2544,6 +2773,9 @@ export const PETS: Pet[] = [
         "groups":  [
                        "动物组",
                        "巨灵组"
+                   ],
+        "series":  [
+                       "光"
                    ],
         "flags":  1,
         "family":  "小独角兽",
@@ -2578,7 +2810,7 @@ export const PETS: Pet[] = [
     }
 ];
 
-export const DATA_UPDATED_AT = "2026-08-08T10:29:14Z";
+export const DATA_UPDATED_AT = "2026-08-08T16:33:45Z";
 
 export const FLAG = {
   BREEDABLE: 1,

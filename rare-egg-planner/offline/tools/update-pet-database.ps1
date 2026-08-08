@@ -160,7 +160,7 @@ function Read-CurrentDatabase([string]$DataPath) {
 
 # Source module: 10-wiki-source.ps1
 function Get-WikiShinyEntries {
-  $ask = '[[Category:精灵]][[是否有异色::是]]|?精灵初阶名称|?精灵阶段|?精灵形态|?主属性|?是否有异色|limit=500'
+  $ask = '[[Category:精灵]][[是否有异色::是]]|?精灵初阶名称|?精灵阶段|?精灵形态|?主属性|?副属性|?是否有异色|limit=500'
   $uri = $WikiApiUrl + "?action=ask&api_version=2&format=json&query=" + [Uri]::EscapeDataString($ask)
   $payload = Get-RemoteJson -Uri $uri
   $names = @($payload.query.results.PSObject.Properties.Name)
@@ -172,6 +172,7 @@ function Get-WikiShinyEntries {
     $rootValues = @($item.printouts.'精灵初阶名称')
     $stageValues = @($item.printouts.'精灵阶段')
     $formValues = @($item.printouts.'精灵形态')
+    $seriesValues = @(@($item.printouts.'主属性') + @($item.printouts.'副属性') | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | ForEach-Object { [string]$_ } | Select-Object -Unique)
     $root = if ($rootValues.Count) { [string]$rootValues[0] } else { [string]$name }
     if ([string]::IsNullOrWhiteSpace($root)) { $root = [string]$name }
     $entries += [pscustomobject][ordered]@{
@@ -179,6 +180,7 @@ function Get-WikiShinyEntries {
       root = $root
       stage = if ($stageValues.Count) { [string]$stageValues[0] } else { "未知阶段" }
       form = if ($formValues.Count) { [string]$formValues[0] } else { "原始形态" }
+      series = @($seriesValues)
       sourceUrl = [string]$item.fullurl
     }
   }
@@ -202,6 +204,9 @@ function Get-EggCatalog {
       if (-not $payload.ok) { throw "蛋组成员接口返回失败：$($group.group_display)" }
       foreach ($card in @($payload.cards)) {
         foreach ($node in @($card.chain_nodes)) {
+          $nodeSeries = @(([string]$node.type_name -split '\s*[,，/]\s*') | ForEach-Object {
+            ([string]$_ -replace '元素精灵$', '' -replace '系精灵$', '' -replace '精灵$', '').Trim()
+          } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
           $nodeNames = @([string]$node.display_name, [string]$node.page_name) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
           $chainNames = @($card.chain_nodes | ForEach-Object { [string]$_.display_name } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
           foreach ($nodeName in $nodeNames) {
@@ -210,6 +215,7 @@ function Get-EggCatalog {
                 name = $nodeName
                 root = [string]$card.root_name
                 groups = @()
+                series = @($nodeSeries)
                 canHatch = [bool]$node.can_hatch
                 baseId = [int]$node.base_id
                 avatar = [string]$node.avatar_url
@@ -220,6 +226,7 @@ function Get-EggCatalog {
             }
             $record = $catalog[$nodeName]
             $record.groups = @(@($record.groups) + @($node.egg_group_names) | Where-Object { $_ -and $_ -ne "无法孵蛋" } | Sort-Object -Unique)
+            $record.series = @(@($record.series) + @($nodeSeries) | Select-Object -Unique)
             if ($node.can_hatch) { $record.canHatch = $true }
             if ([string]::IsNullOrWhiteSpace([string]$record.avatar)) { $record.avatar = [string]$node.avatar_url }
             $record.chainNames = @(@($record.chainNames) + @($chainNames) | Select-Object -Unique)
@@ -231,6 +238,7 @@ function Get-EggCatalog {
                   baseId = $variantBaseId
                   label = $variantLabel
                   avatar = [string]$node.avatar_url
+                  series = @($nodeSeries)
                   canHatch = [bool]$node.can_hatch
                   maternalText = [string]$node.maternal_text
                 }
@@ -267,8 +275,12 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
   }
 
   $wikiFormsByRoot = @{}
+  $wikiByName = @{}
   foreach ($familyGroup in @($WikiEntries | Group-Object root)) {
     $wikiFormsByRoot[$familyGroup.Name] = @($familyGroup.Group | Sort-Object @{ Expression = { Get-StageRank $_.stage } }, name)
+  }
+  foreach ($wikiEntry in $WikiEntries) {
+    $wikiByName[[string]$wikiEntry.name] = $wikiEntry
   }
 
   $summaryImageMap = @{}
@@ -310,6 +322,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
       $petGroups += [string]$groups[$groupIndex]
     }
     $catalogRecord = if ($EggCatalog.ContainsKey($name)) { $EggCatalog[$name] } else { $null }
+    $wikiRecord = if ($wikiByName.ContainsKey($name)) { $wikiByName[$name] } else { $null }
     $family = if ($catalogRecord -and $catalogRecord.root) { [string]$catalogRecord.root } else { $name }
     $summaryImageUrl = if ($summaryImageMap.ContainsKey($name)) { [string]$summaryImageMap[$name] } elseif ($catalogRecord -and $catalogRecord.avatar) { [string]$catalogRecord.avatar } else { "" }
     if ([string]::IsNullOrWhiteSpace($summaryImageUrl)) { throw "缺少精灵头像地址：$name" }
@@ -331,6 +344,15 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
       $variantImageUrl = if (-not [string]::IsNullOrWhiteSpace([string]$variant.avatar)) { [string]$variant.avatar } else { $summaryImageUrl }
       $imageMap[$key] = $variantImageUrl
       $legacyKey = if (-not $splitVariants.Count -or $baseId -eq $summaryBaseId) { $name } else { "" }
+      $petSeries = if ($variant.PSObject.Properties.Name -contains "series" -and @($variant.series).Count) {
+        @($variant.series)
+      } elseif ($catalogRecord -and @($catalogRecord.series).Count) {
+        @($catalogRecord.series)
+      } elseif ($wikiRecord -and @($wikiRecord.series).Count) {
+        @($wikiRecord.series)
+      } else {
+        @("待核对")
+      }
       $basePets += [pscustomobject][ordered]@{
         id = -1
         key = $key
@@ -340,6 +362,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
         legacyKey = $legacyKey
         season = [string]$seasons[$seasonIndex]
         groups = @($petGroups)
+        series = @($petSeries)
         flags = [int]$row[3]
         family = $family
         stage = "孵蛋目标"
@@ -378,6 +401,15 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
     $familyRecord = if ($catalogByRoot.ContainsKey($entry.root)) { $catalogByRoot[$entry.root] } else { $null }
     $groupSource = if ($exactRecord) { $exactRecord } else { $familyRecord }
     $petGroups = if ($groupSource) { @($groupSource.groups) } else { @() }
+    $petSeries = if ($exactRecord -and @($exactRecord.series).Count) {
+      @($exactRecord.series)
+    } elseif (@($entry.series).Count) {
+      @($entry.series)
+    } elseif ($familyRecord -and @($familyRecord.series).Count) {
+      @($familyRecord.series)
+    } else {
+      @("待核对")
+    }
     $genderFlags = if ($genderByRoot.ContainsKey($entry.root)) { [int]$genderByRoot[$entry.root] } else { 0 }
     if ($exactRecord -and $exactRecord.canHatch -and $petGroups.Count) {
       $flags = 1 -bor $genderFlags
@@ -414,6 +446,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
       legacyKey = $key
       season = $season
       groups = @($petGroups)
+      series = @($petSeries)
       flags = $flags
       family = [string]$entry.root
       stage = [string]$entry.stage
@@ -491,6 +524,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
       availability = $availability
       availabilityReason = $availabilityReason
       groups = @($pet.groups)
+      series = @($pet.series)
       flags = $pet.flags
       family = $pet.family
       stage = $pet.stage
@@ -505,17 +539,27 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
 
   if (-not ($pets.name -contains "白金独角兽")) { throw "BWiki 异色清单未能补入白金独角兽。" }
   if ($pets.Count -lt $rows.Count) { throw "合并后的精灵数量异常：$($pets.Count)" }
+  $unresolvedSeries = @($pets | Where-Object { @($_.series) -contains "待核对" })
+  if ($unresolvedSeries.Count) {
+    throw "以下精灵缺少系列资料：$(@($unresolvedSeries.name) -join '、')"
+  }
 
+  $seriesOrder = @("普通", "火", "水", "草", "电", "冰", "武", "毒", "地", "萌", "翼", "光", "恶", "幽", "幻", "机械", "虫", "龙", "待核对")
+  $seriesInDatabase = @($pets | ForEach-Object { @($_.series) } | Select-Object -Unique)
+  $series = @($seriesOrder | Where-Object { $seriesInDatabase -contains $_ })
+  $series += @($seriesInDatabase | Where-Object { $seriesOrder -notcontains $_ } | Sort-Object)
   $generatedAt = (Get-Date).ToUniversalTime().ToString("s") + "Z"
   $database = [ordered]@{
-    schemaVersion = 6
+    schemaVersion = 7
     pets = $pets
+    series = @($series)
     updatedAt = $generatedAt
     source = [ordered]@{
       planner = $PlannerUrl
       summary = $SummaryUrl
       wiki = $WikiApiUrl
       eggGroups = $EggApiBaseUrl.TrimEnd('/') + "/egg-groups"
+      series = "egg-group-members.type_name; fallback BWiki 主属性/副属性"
       targetScope = "planner-shiny-final + bwiki-shiny-final + regional-final-variants + form-inheritance-overrides"
       priorityPolicy = "season-limited-shiny-first; permanent-shiny-after-limited-or-when-limited-is-not-currently-actionable"
       plannerGeneratedAt = [string]$Planner.metadata.generated_at
@@ -530,6 +574,7 @@ function New-Database($Planner, $Summary, $WikiEntries, $EggCatalog) {
     Database = $database
     ImageMap = $imageMap
     Groups = $groups
+    Series = $series
     Seasons = $seasons
     WikiEntryCount = @($WikiEntries).Count
     WikiTargetCount = @($wikiTargets).Count
@@ -543,6 +588,7 @@ function Write-ProjectData([string]$ProjectRoot, $Database, [string]$ImageDirect
   if (-not (Test-Path -LiteralPath (Split-Path -Parent $appDataPath))) { return }
 
   $groupsJson = $Groups | ConvertTo-Json -Depth 4
+  $seriesJson = $Database.series | ConvertTo-Json -Depth 4
   $petsJson = $Database.pets | ConvertTo-Json -Depth 12
   $typescript = @"
 export type Pet = {
@@ -556,6 +602,7 @@ export type Pet = {
   availability: "season-limited" | "permanent";
   availabilityReason: string;
   groups: string[];
+  series: string[];
   flags: number;
   family: string;
   stage: string;
@@ -568,6 +615,8 @@ export type Pet = {
 };
 
 export const EGG_GROUPS = $groupsJson as const;
+
+export const PET_SERIES = $seriesJson as const;
 
 export const PETS: Pet[] = $petsJson;
 

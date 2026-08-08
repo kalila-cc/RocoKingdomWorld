@@ -44,6 +44,39 @@ export type Plan = {
   recommendation: number;
 };
 
+type PlanCandidate = {
+  slots: Slot[];
+  edges: PairEdge[];
+  fillsRequestedNests: boolean;
+  allNestsConnected: boolean;
+  pairedMothers: number;
+  connectedSlots: number;
+  maleCount: number;
+};
+
+function prefersCandidate(candidate: PlanCandidate, current: PlanCandidate) {
+  const candidateRank = [
+    Number(candidate.fillsRequestedNests),
+    Number(candidate.allNestsConnected),
+    candidate.pairedMothers,
+    candidate.connectedSlots,
+    candidate.edges.length,
+    -candidate.maleCount,
+  ];
+  const currentRank = [
+    Number(current.fillsRequestedNests),
+    Number(current.allNestsConnected),
+    current.pairedMothers,
+    current.connectedSlots,
+    current.edges.length,
+    -current.maleCount,
+  ];
+  for (let index = 0; index < candidateRank.length; index += 1) {
+    if (candidateRank[index] !== currentRank[index]) return candidateRank[index] > currentRank[index];
+  }
+  return false;
+}
+
 export const OWN = {
   SHINY_M: 1,
   SHINY_F: 2,
@@ -84,6 +117,10 @@ export function petKey(pet: PlannerPet) {
 
 export function petLabel(pet: PlannerPet) {
   return pet.form ? `${pet.name}（${pet.form}）` : pet.name;
+}
+
+export function isBattlePassPet(pet: PlannerPet) {
+  return pet.availabilityReason.includes("战令");
 }
 
 export function migrateOwnedMap(pets: PlannerPet[], source: OwnedMap | undefined) {
@@ -150,6 +187,15 @@ function canProduce(kind: TargetKind, fatherVariant: Variant, motherVariant: Var
   return kind === "shiny" ? shiny : kind === "colorful" ? colorful : shiny && colorful;
 }
 
+function motherVariantValue(kind: TargetKind, fatherVariant: Variant, motherVariant: Variant) {
+  if (!canProduce(kind, fatherVariant, motherVariant)) return -1;
+  const father = variantTraits(fatherVariant);
+  const mother = variantTraits(motherVariant);
+  const combinedTraits = Number(father.shiny || mother.shiny) + Number(father.colorful || mother.colorful);
+  const motherTraits = Number(mother.shiny) + Number(mother.colorful);
+  return combinedTraits * 100 + motherTraits * 10;
+}
+
 function tierMatches(pet: PlannerPet, objective: TargetKind, targetTier: TargetTier) {
   return objective !== "shiny" || targetTier === "all" || pet.availability === targetTier;
 }
@@ -192,7 +238,9 @@ export function createPlanner(pets: PlannerPet[]) {
   }
 
   function bestMotherVariant(owned: OwnedMap, target: PlannerPet, father: Parent, kind: TargetKind) {
-    return availableMotherVariants(owned[petKey(target)]).find((variant) => canProduce(kind, father.variant, variant));
+    return availableMotherVariants(owned[petKey(target)])
+      .filter((variant) => canProduce(kind, father.variant, variant))
+      .sort((a, b) => motherVariantValue(kind, father.variant, b) - motherVariantValue(kind, father.variant, a))[0];
   }
 
   function maleParents(owned: OwnedMap, kind: TargetKind) {
@@ -226,31 +274,49 @@ export function createPlanner(pets: PlannerPet[]) {
     return covered.size * 100 + edges * 8;
   }
 
-  function optimizeLayout(roster: RosterItem[]) {
+  function optimizeLayout(roster: RosterItem[], salt: number) {
     const positions = layoutPositions(roster.length);
-    let slots: Slot[] = roster.map((item, index) => ({ ...item, x: positions[index].x, y: positions[index].y }));
-    let bestScore = layoutScore(slots);
-    let improved = true;
-    while (improved) {
-      improved = false;
-      for (let i = 0; i < slots.length; i += 1) {
-        for (let j = i + 1; j < slots.length; j += 1) {
-          const candidate = slots.map((slot) => ({ ...slot }));
-          const point = { x: candidate[i].x, y: candidate[i].y };
-          candidate[i].x = candidate[j].x;
-          candidate[i].y = candidate[j].y;
-          candidate[j].x = point.x;
-          candidate[j].y = point.y;
-          const score = layoutScore(candidate);
-          if (score > bestScore) {
-            slots = candidate;
-            bestScore = score;
-            improved = true;
+    const starts = [
+      roster,
+      ...Array.from({ length: Math.min(11, Math.max(3, roster.length)) }, (_, restart) => [...roster].sort((a, b) => {
+        const score = (item: RosterItem) => hashText(`${petKey(item.pet)}:${item.role}:${item.variant}:${salt}:${restart}`);
+        return score(a) - score(b);
+      })),
+    ];
+    let bestSlots: Slot[] = [];
+    let globalBestScore = -1;
+
+    starts.forEach((start) => {
+      let slots: Slot[] = start.map((item, index) => ({ ...item, x: positions[index].x, y: positions[index].y }));
+      let bestScore = layoutScore(slots);
+      while (true) {
+        let nextSlots: Slot[] | null = null;
+        let nextScore = bestScore;
+        for (let i = 0; i < slots.length; i += 1) {
+          for (let j = i + 1; j < slots.length; j += 1) {
+            const candidate = slots.map((slot) => ({ ...slot }));
+            const point = { x: candidate[i].x, y: candidate[i].y };
+            candidate[i].x = candidate[j].x;
+            candidate[i].y = candidate[j].y;
+            candidate[j].x = point.x;
+            candidate[j].y = point.y;
+            const score = layoutScore(candidate);
+            if (score > nextScore) {
+              nextSlots = candidate;
+              nextScore = score;
+            }
           }
         }
+        if (!nextSlots) break;
+        slots = nextSlots;
+        bestScore = nextScore;
       }
-    }
-    return slots;
+      if (bestScore > globalBestScore) {
+        bestSlots = slots;
+        globalBestScore = bestScore;
+      }
+    });
+    return bestSlots;
   }
 
   function buildEdges(slots: Slot[]) {
@@ -305,7 +371,7 @@ export function createPlanner(pets: PlannerPet[]) {
       return { objective, targetTier, slots: [], edges: [], pairedMothers: 0, targetCount: targets.length, directCount: direct.size, uncovered: allMissing.length };
     }
 
-    let best: { slots: Slot[]; edges: PairEdge[]; score: number } | null = null;
+    let best: PlanCandidate | null = null;
     const maxMales = Math.min(males.length, nestCount - 1, 5);
     for (let maleCount = 1; maleCount <= maxMales; maleCount += 1) {
       const chosenMales = chooseMales(males, targets, owned, kind, maleCount, salt);
@@ -316,27 +382,34 @@ export function createPlanner(pets: PlannerPet[]) {
           const scoredVariants = variants.map((variant) => ({
             variant,
             compatible: chosenMales.filter((father) => sameEggGroup(father.pet, pet) && canProduce(kind, father.variant, variant)).length,
-          })).sort((a, b) => b.compatible - a.compatible || (a.variant === "normal" ? -1 : 1));
+            traitValue: chosenMales.reduce((sum, father) => sameEggGroup(father.pet, pet) ? sum + Math.max(0, motherVariantValue(kind, father.variant, variant)) : sum, 0),
+          })).sort((a, b) => b.compatible - a.compatible || b.traitValue - a.traitValue);
           const bestVariant = scoredVariants[0];
           const futureReach = pet.maleTargets.filter((name) => {
             const future = petMap.get(name);
             return future ? isMissingObjective(future) && isEggTarget(future) && isCurrentTier(future) : false;
           }).length;
-          return { pet, variant: bestVariant.variant, compatible: bestVariant.compatible, score: bestVariant.compatible * 100 + futureReach * 2 + (hashText(`${petKey(pet)}:${salt}`) % 97) / 100 };
+          return { pet, variant: bestVariant.variant, compatible: bestVariant.compatible, traitValue: bestVariant.traitValue, futureReach, tieBreaker: hashText(`${petKey(pet)}:${salt}`) % 97 };
         })
         .filter((item) => item.compatible > 0)
-        .sort((a, b) => b.score - a.score)
+        .sort((a, b) => b.compatible - a.compatible
+          || b.traitValue - a.traitValue
+          || b.futureReach - a.futureReach
+          || b.tieBreaker - a.tieBreaker)
         .slice(0, motherCount);
 
       const roster: RosterItem[] = [
         ...chosenMales.map((parent) => ({ pet: parent.pet, variant: parent.variant, targetKind: kind, role: "father" as const })),
         ...chosenTargets.map((item) => ({ pet: item.pet, variant: item.variant, targetKind: kind, role: "mother" as const })),
       ];
-      const slots = optimizeLayout(roster);
+      const slots = optimizeLayout(roster, salt);
       const edges = buildEdges(slots);
       const pairedMothers = new Set(edges.map((edge) => petKey(edge.mother.pet))).size;
-      const score = pairedMothers * 1000 + edges.length * 20 - chosenMales.length * 2;
-      if (!best || score > best.score) best = { slots, edges, score };
+      const connectedSlots = new Set(edges.flatMap((edge) => [edge.father, edge.mother])).size;
+      const fillsRequestedNests = slots.length === nestCount;
+      const allNestsConnected = fillsRequestedNests && connectedSlots === slots.length;
+      const candidate = { slots, edges, fillsRequestedNests, allNestsConnected, pairedMothers, connectedSlots, maleCount: chosenMales.length };
+      if (!best || prefersCandidate(candidate, best)) best = candidate;
     }
 
     const slots = best?.slots || [];
@@ -345,15 +418,14 @@ export function createPlanner(pets: PlannerPet[]) {
     return { objective, targetTier, slots, edges, pairedMothers, targetCount: targets.length, directCount: direct.size, uncovered: allMissing.length - direct.size };
   }
 
-  function recommendationFor(plan: Omit<Plan, "kind" | "recommendation">, kind: TargetKind, nestCount: number) {
+  function recommendationFor(plan: Omit<Plan, "kind" | "recommendation">, kind: TargetKind) {
     if (!plan.slots.length || !plan.pairedMothers) return 0;
     const base = { combo: 82, shiny: 72, colorful: 64 }[kind];
-    const utilization = plan.slots.length / nestCount;
     const motherSlots = plan.slots.filter((slot) => slot.role === "mother").length;
     const coverage = plan.pairedMothers / Math.max(1, motherSlots);
     const connectivity = Math.min(1, plan.edges.length / Math.max(1, plan.pairedMothers * 2));
     const urgency = plan.targetTier === "season-limited" ? 4 : plan.targetTier === "permanent" ? -6 : 0;
-    return Math.min(99, Math.max(1, Math.round(base + utilization * 5 + coverage * 7 + connectivity * 4 + urgency)));
+    return Math.min(99, Math.max(1, Math.round(base + coverage * 7 + connectivity * 4 + urgency)));
   }
 
   function makeAutoPlan(owned: OwnedMap, nestCount: number, focus: Focus, salt: number): Plan {
@@ -365,7 +437,35 @@ export function createPlanner(pets: PlannerPet[]) {
     const permanentShinyProgress = rankedShinyPlans("permanent");
     const fallback = AUTO_PRIORITY.map((kind) => ({ kind, plan: makePlan(owned, nestCount, focus, kind, salt, kind) }));
     const selected = limitedShinyProgress[0] || permanentShinyProgress[0] || fallback.find(({ plan }) => plan.slots.length > 0 && plan.pairedMothers > 0) || fallback[0];
-    return { ...selected.plan, kind: selected.kind, recommendation: recommendationFor(selected.plan, selected.kind, nestCount) };
+    return { ...selected.plan, kind: selected.kind, recommendation: recommendationFor(selected.plan, selected.kind) };
+  }
+
+  function makeAutoPlanOptions(owned: OwnedMap, nestCount: number, focus: Focus, limit = 5) {
+    const candidates: Array<{ plan: Plan; salt: number }> = [];
+    const seen = new Set<string>();
+    const optionLimit = Math.max(1, Math.min(8, Math.floor(limit)));
+    const attempts = Math.max(24, optionLimit * 8);
+
+    for (let salt = 0; salt < attempts && candidates.length < optionLimit; salt += 1) {
+      const plan = makeAutoPlan(owned, nestCount, focus, salt);
+      const signature = [
+        plan.kind,
+        plan.objective,
+        plan.targetTier,
+        ...plan.slots.map((slot) => `${slot.role}:${petKey(slot.pet)}:${slot.variant}:${slot.x}:${slot.y}`),
+      ].join("|");
+      if (seen.has(signature)) continue;
+      seen.add(signature);
+      candidates.push({ plan, salt });
+    }
+
+    return candidates
+      .sort((a, b) => b.plan.recommendation - a.plan.recommendation
+        || b.plan.pairedMothers - a.plan.pairedMothers
+        || b.plan.edges.length - a.plan.edges.length
+        || a.salt - b.salt)
+      .slice(0, optionLimit)
+      .map(({ plan }) => plan);
   }
 
   function buildRoadmap(owned: OwnedMap, focus: Focus, kind: TargetKind, objective: TargetKind) {
@@ -396,5 +496,5 @@ export function createPlanner(pets: PlannerPet[]) {
     return steps;
   }
 
-  return { petMap, maleParents, makeAutoPlan, buildRoadmap };
+  return { petMap, maleParents, makeAutoPlan, makeAutoPlanOptions, buildRoadmap };
 }

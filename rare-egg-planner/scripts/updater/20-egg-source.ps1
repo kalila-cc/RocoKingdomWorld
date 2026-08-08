@@ -14,6 +14,9 @@ function Get-EggCatalog {
       if (-not $payload.ok) { throw "蛋组成员接口返回失败：$($group.group_display)" }
       foreach ($card in @($payload.cards)) {
         foreach ($node in @($card.chain_nodes)) {
+          $nodeSeries = @(([string]$node.type_name -split '\s*[,，/]\s*') | ForEach-Object {
+            ([string]$_ -replace '元素精灵$', '' -replace '系精灵$', '' -replace '精灵$', '').Trim()
+          } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
           $nodeNames = @([string]$node.display_name, [string]$node.page_name) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
           $chainNames = @($card.chain_nodes | ForEach-Object { [string]$_.display_name } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
           foreach ($nodeName in $nodeNames) {
@@ -22,6 +25,7 @@ function Get-EggCatalog {
                 name = $nodeName
                 root = [string]$card.root_name
                 groups = @()
+                series = @($nodeSeries)
                 canHatch = [bool]$node.can_hatch
                 baseId = [int]$node.base_id
                 avatar = [string]$node.avatar_url
@@ -32,6 +36,7 @@ function Get-EggCatalog {
             }
             $record = $catalog[$nodeName]
             $record.groups = @(@($record.groups) + @($node.egg_group_names) | Where-Object { $_ -and $_ -ne "无法孵蛋" } | Sort-Object -Unique)
+            $record.series = @(@($record.series) + @($nodeSeries) | Select-Object -Unique)
             if ($node.can_hatch) { $record.canHatch = $true }
             if ([string]::IsNullOrWhiteSpace([string]$record.avatar)) { $record.avatar = [string]$node.avatar_url }
             $record.chainNames = @(@($record.chainNames) + @($chainNames) | Select-Object -Unique)
@@ -43,6 +48,7 @@ function Get-EggCatalog {
                   baseId = $variantBaseId
                   label = $variantLabel
                   avatar = [string]$node.avatar_url
+                  series = @($nodeSeries)
                   canHatch = [bool]$node.can_hatch
                   maternalText = [string]$node.maternal_text
                 }
