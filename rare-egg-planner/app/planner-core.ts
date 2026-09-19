@@ -56,10 +56,19 @@ type PlanCandidate = {
   maleCount: number;
 };
 
+// Count participating individuals, not lines: extra compatible links do not
+// turn one father into multiple fathers or penalize a well-connected layout.
+export function parentBalance(edges: PairEdge[]) {
+  const fathers = new Set(edges.map((edge) => edge.father)).size;
+  const mothers = new Set(edges.map((edge) => edge.mother)).size;
+  return Math.min(fathers, mothers) / Math.max(1, fathers, mothers);
+}
+
 function prefersCandidate(candidate: PlanCandidate, current: PlanCandidate) {
   const candidateRank = [
     Number(candidate.fillsRequestedNests),
     Number(candidate.allNestsConnected),
+    parentBalance(candidate.edges),
     candidate.priorityTargets,
     candidate.distinctTargets,
     candidate.pairedMothers,
@@ -70,6 +79,7 @@ function prefersCandidate(candidate: PlanCandidate, current: PlanCandidate) {
   const currentRank = [
     Number(current.fillsRequestedNests),
     Number(current.allNestsConnected),
+    parentBalance(current.edges),
     current.priorityTargets,
     current.distinctTargets,
     current.pairedMothers,
@@ -576,6 +586,14 @@ export function createPlanner(pets: PlannerPet[]) {
     };
   }
 
+  function comparePlanCandidates(a: Omit<Plan, "kind" | "recommendation">, b: Omit<Plan, "kind" | "recommendation">, nestCount: number) {
+    const metrics = (plan: typeof a) => candidateMetrics(plan.slots, plan.edges, nestCount,
+      plan.slots.filter((slot) => slot.role === "father").length,
+      (pet) => tierMatches(pet, plan.objective, plan.targetTier));
+    const left = metrics(a), right = metrics(b);
+    return prefersCandidate(left, right) ? -1 : prefersCandidate(right, left) ? 1 : 0;
+  }
+
   type ExactAssignmentResult = { rank: number; fatherMask: number };
 
   function assignmentWeights(profile: number, pattern: ExactPlacementPattern) {
@@ -783,10 +801,8 @@ export function createPlanner(pets: PlannerPet[]) {
           bestTieScore = selectedScore;
         }
       });
-      const nextMaleCount = maleCount + 1;
-      const nextMaximumMothers = nestCount - nextMaleCount;
-      const currentBest = best as PlanCandidate | null;
-      if (currentBest?.fillsRequestedNests && currentBest.allNestsConnected && currentBest.pairedMothers > nextMaximumMothers) break;
+      // Larger father subsets can improve balance even with fewer targets.
+      // Do not prune them using the old mother/target coverage bound.
     }
     return best;
   }
@@ -887,9 +903,9 @@ export function createPlanner(pets: PlannerPet[]) {
     const base = { combo: 82, shiny: 72, colorful: 64 }[kind];
     const motherSlots = plan.slots.filter((slot) => slot.role === "mother").length;
     const coverage = plan.pairedMothers / Math.max(1, motherSlots);
-    const connectivity = Math.min(1, plan.edges.length / Math.max(1, plan.pairedMothers));
+    const balance = parentBalance(plan.edges);
     const urgency = plan.targetTier === "season-limited" ? 4 : plan.targetTier === "permanent" ? -6 : 0;
-    return Math.min(99, Math.max(1, Math.round(base + coverage * 7 + connectivity * 4 + urgency)));
+    return Math.min(99, Math.max(1, Math.round(base + coverage * 7 + balance * 4 + urgency)));
   }
 
   function makeAutoPlan(owned: OwnedMap, nestCount: number, focus: Focus, salt: number): Plan {
@@ -903,16 +919,10 @@ export function createPlanner(pets: PlannerPet[]) {
         : selected.plan;
       return { ...plan, kind: selected.kind, recommendation: recommendationFor(plan, selected.kind) };
     };
-    const distinctMotherTargets = (plan: Omit<Plan, "kind" | "recommendation">, priorityOnly = false) => new Set(plan.edges
-      .filter((edge) => !priorityOnly || tierMatches(edge.mother.pet, plan.objective, plan.targetTier))
-      .map((edge) => petKey(edge.mother.pet))).size;
     const rankedShinyPlans = (targetTier: Exclude<TargetTier, "all">) => (["combo", "shiny"] as TargetKind[])
       .map((kind) => ({ kind, plan: makePlan(owned, nestCount, focus, kind, salt, "shiny", targetTier) }))
       .filter(({ plan }) => plan.slots.length > 0 && plan.pairedMothers > 0)
-      .sort((a, b) => distinctMotherTargets(b.plan, true) - distinctMotherTargets(a.plan, true)
-        || distinctMotherTargets(b.plan) - distinctMotherTargets(a.plan)
-        || b.plan.pairedMothers - a.plan.pairedMothers
-        || b.plan.edges.length - a.plan.edges.length
+      .sort((a, b) => comparePlanCandidates(a.plan, b.plan, nestCount)
         || AUTO_PRIORITY.indexOf(a.kind) - AUTO_PRIORITY.indexOf(b.kind));
     for (const targetTier of ["season-limited", "permanent"] as const) {
       const selected = rankedShinyPlans(targetTier)[0];
@@ -993,12 +1003,7 @@ export function createPlanner(pets: PlannerPet[]) {
 
     return candidates
       .sort((a, b) => {
-        const distinctTargets = (plan: Plan, priorityOnly = false) => new Set(plan.edges
-          .filter((edge) => !priorityOnly || tierMatches(edge.mother.pet, plan.objective, plan.targetTier))
-          .map((edge) => petKey(edge.mother.pet))).size;
-        return distinctTargets(b.plan, true) - distinctTargets(a.plan, true)
-        || distinctTargets(b.plan) - distinctTargets(a.plan)
-        || b.plan.pairedMothers - a.plan.pairedMothers
+        return comparePlanCandidates(a.plan, b.plan, nestCount)
         || b.plan.recommendation - a.plan.recommendation
         || b.plan.edges.length - a.plan.edges.length
         || a.salt - b.salt;

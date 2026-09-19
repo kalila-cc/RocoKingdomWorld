@@ -404,12 +404,13 @@ test("offline package is self-contained and data-complete", async () => {
   };
   const exactHybridPlan = hybridPlanner.makeAutoPlan(hybridOwned, 8, "all", 0);
   const heuristicHybridPlan = hybridPlanner.makeAutoPlan(hybridOwned, 8, "all", 1);
-  assert.equal(exactHybridPlan.slots.filter((slot) => slot.role === "father").length, 2, "the exact branch should find the non-greedy two-father combination");
-  assert.equal(exactHybridPlan.pairedMothers, 6, "the exact branch should cover all six mothers when greedy coverage stops at five");
+  assert.equal(exactHybridPlan.slots.filter((slot) => slot.role === "father").length, 3, "with only three available fathers, 3:5 should beat higher-coverage 2:6");
+  assert.equal(exactHybridPlan.pairedMothers, 5, "balance now takes precedence over a sixth distinct mother");
   assert.equal(new Set(exactHybridPlan.edges.flatMap((edge) => [edge.father.pet.key, edge.mother.pet.key])).size, 8, "the exact branch should connect every selected father and mother");
   const exactHybridTargets = new Set(exactHybridPlan.edges.map((edge) => edge.mother.pet.key)).size;
   const heuristicHybridTargets = new Set(heuristicHybridPlan.edges.map((edge) => edge.mother.pet.key)).size;
-  assert.ok(exactHybridTargets > heuristicHybridTargets, "the exact first option should cover more distinct targets than the known greedy counterexample");
+  assert.equal(exactHybridTargets, 5, "after balance, preserve five distinct targets rather than duplicates");
+  assert.ok(exactHybridTargets >= heuristicHybridTargets, "the exact branch must not lose coverage at the chosen balance");
   const battlePassPets = pets.filter((pet) => plannerApi.isBattlePassPet(pet));
   assert.equal(battlePassPets.length, 8, "current database should identify eight battle-pass pets across S1–S4");
   assert.deepEqual(Array.from(battlePassPets.map((pet) => pet.name)).sort(), ["爆焰喷喷", "疾光千兽", "离心舞者", "绒仙子", "胡桃王子", "雪怪", "月使鹭纳", "圣凯布米龙"].sort());
@@ -436,7 +437,7 @@ test("offline package is self-contained and data-complete", async () => {
   assert.equal(fullNestPlan.slots.length, 10, "a feasible plan should use all configured nests");
   assert.equal(connectedMothers.size, fullNestPlan.slots.filter((slot) => slot.role === "mother").length, "every mother in a full plan should connect to a father");
   assert.equal(connectedSlots.size, fullNestPlan.slots.length, "every used nest should take part in the plan");
-  assert.equal(fullNestPlan.recommendation, 97, "a fully connected layout should not gain extra recommendation points merely from redundant pair lines");
+  assert.equal(fullNestPlan.recommendation, 94, "a connected but father-scarce layout should not receive the same efficiency score as 1:1");
   const repeatedMotherPets = [
     { key: "priority-father-a", name: "priority-father-a", form: "", season: "S3", groups: ["test"], maleTargets: ["limited-a", "limited-b", "limited-c", "permanent-a"], flags: 1, availability: "season-limited", availabilityReason: "test", offspringKey: "priority-father-a" },
     { key: "priority-father-b", name: "priority-father-b", form: "", season: "S3", groups: ["test"], maleTargets: ["limited-a", "limited-b", "limited-c", "permanent-a"], flags: 1, availability: "season-limited", availabilityReason: "test", offspringKey: "priority-father-b" },
