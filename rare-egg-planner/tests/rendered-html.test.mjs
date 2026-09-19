@@ -29,7 +29,7 @@ test("server-renders the rare egg planner", async () => {
   assert.doesNotMatch(html, /功能模块快速定位|class="side-nav"/);
   assert.doesNotMatch(html, /id="plan"|id="collection"|id="route"/);
   assert.match(html, /洛克王国世界 Bwiki/);
-  assert.match(html, /wiki\.biligame\.com\/rocom\/%E9%A6%96%E9%A1%B5/);
+  assert.match(html, /wiki\.biligame\.com\/nrc\//);
   assert.match(html, /\/favicon-egg\.png/);
   assert.match(html, /\/assets\/brand\/rare-egg-icon-transparent\.png/);
   assert.doesNotMatch(html, /http:\/\/localhost\/favicon-egg\.png/);
@@ -40,11 +40,13 @@ test("server-renders the rare egg planner", async () => {
 });
 
 test("offline package is self-contained and data-complete", async () => {
-  const [html, app, plannerCore, plannerSource, progressSource, data, style, appStyle, updater, sourceUpdater, updaterRuntime, updaterWiki, updaterEggs, updaterBuilder, updaterInstall, launcher, petFiles, seriesIconFiles, publicSeriesIconFiles, shinyMark, colorfulMark, comboMark, brandIcon, favicon] = await Promise.all([
+  const [html, app, plannerCore, plannerSource, planImageExport, planImageSource, progressSource, data, style, appStyle, updater, sourceUpdater, updaterRuntime, updaterWiki, updaterEggs, updaterBuilder, updaterInstall, launcher, petFiles, seriesIconFiles, publicSeriesIconFiles, shinyMark, colorfulMark, comboMark, brandIcon, favicon] = await Promise.all([
     readFile(new URL("../offline/index.html", import.meta.url), "utf8"),
     readFile(new URL("../offline/assets/app.js", import.meta.url), "utf8"),
     readFile(new URL("../offline/assets/planner-core.js", import.meta.url), "utf8"),
     readFile(new URL("../app/planner-core.ts", import.meta.url), "utf8"),
+    readFile(new URL("../offline/assets/plan-image-export.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/plan-image-export.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/hooks/use-planner-progress.ts", import.meta.url), "utf8"),
     readFile(new URL("../offline/assets/data.js", import.meta.url), "utf8"),
     readFile(new URL("../offline/assets/style.css", import.meta.url), "utf8"),
@@ -66,17 +68,41 @@ test("offline package is self-contained and data-complete", async () => {
     readFile(new URL("../offline/assets/brand/rare-egg-icon-transparent.png", import.meta.url)),
     readFile(new URL("../offline/assets/brand/rare-egg-favicon.png", import.meta.url)),
   ]);
+  const embeddedPlanImages = await readFile(new URL("../offline/assets/plan-image-assets.js", import.meta.url), "utf8");
 
   assert.match(html, /assets\/style\.css/);
   assert.match(html, /assets\/data\.js/);
   assert.match(html, /assets\/planner-core\.js/);
+  assert.match(html, /assets\/plan-image-assets\.js/);
+  assert.match(html, /assets\/plan-image-export\.js/);
   assert.match(html, /assets\/app\.js/);
   assert.match(html, /assets\/brand\/rare-egg-icon-transparent\.png/);
   assert.match(html, /assets\/brand\/rare-egg-favicon\.png/);
   assert.match(html, /当前推荐摆窝方案/);
+  assert.match(html, /id="exportPlanBtn"[\s\S]*?导出图片/);
   assert.match(html, /本轮孵蛋目标/);
   assert.match(html, /后续收集路线/);
   assert.match(app, /异色获取信息/);
+  assert.match(app, /ROCO_PLAN_EXPORT\.exportPlanImage\(\{plan:currentPlan,planIndex:state\.selectedPlan/);
+  assert.match(planImageExport, /window\.ROCO_PLAN_EXPORT/);
+  assert.match(planImageExport, /const WIDTH = 1600;[\s\S]*?const HEIGHT = 1000;/);
+  assert.match(planImageExport, /id: "roco-plan-image-export"/);
+  assert.match(planImageSource, /export async function renderPlanImage/);
+  assert.match(planImageSource, /ROCO_PLAN_IMAGE_ASSETS/);
+  assert.match(planImageSource, /await writable\.write\(await blob\.arrayBuffer\(\)\)/);
+  assert.match(embeddedPlanImages, /window\.ROCO_PLAN_IMAGE_ASSETS = Object\.freeze/);
+  assert.match(embeddedPlanImages, /"assets\/pets\/0\.webp":"data:image\/webp;base64,/);
+  assert.match(embeddedPlanImages, /"assets\/traits\/mark-shiny\.png":"data:image\/png;base64,/);
+  const embeddedImageContext = { window: {} };
+  vm.runInNewContext(embeddedPlanImages, embeddedImageContext);
+  const embeddedImageAssets = embeddedImageContext.window.ROCO_PLAN_IMAGE_ASSETS;
+  assert.equal(Object.keys(embeddedImageAssets).length, petFiles.length + 3, "every pet image and trait mark must be embedded for file:// canvas export");
+  petFiles.forEach((fileName) => assert.match(embeddedImageAssets[`assets/pets/${fileName}`], /^data:image\/webp;base64,/));
+  assert.doesNotMatch(planImageSource, /function drawExportFrame/);
+  assert.match(planImageSource, /context\.fillStyle = "#fbfaf6";[\s\S]*?context\.fillRect\(0, 0, WIDTH, HEIGHT\);/);
+  assert.doesNotMatch(planImageSource, /fillRect\(0, 0, 16, HEIGHT\)/);
+  assert.match(planImageSource, /function drawPlanNode[\s\S]*?context\.save\(\);[\s\S]*?context\.restore\(\);/);
+  assert.match(planImageSource, /const targetNames[\s\S]*?context\.textAlign = "left";[\s\S]*?context\.fillText\("本轮孵蛋目标"/);
   assert.match(app, /后代不继承此形态/);
   assert.ok(brandIcon.length > 10_000, "offline package should include the generated website icon");
   assert.ok(favicon.length > 1_000, "offline package should include the optically corrected favicon");
@@ -235,6 +261,10 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(html, /class="danger-action" id="clearBtn" aria-label="清空全部图鉴登记（需要确认）"/);
   assert.match(app, /const confirmed=confirm\(`此操作无法撤销，建议先导出进度作为备份。[\s\S]*?if\(!confirmed\)return;state\.owned=\{\}/);
   assert.match(progressSource, /const confirmed = window\.confirm\(`此操作无法撤销，建议先导出进度作为备份。[\s\S]*?if \(!confirmed\) return false;[\s\S]*?setOwned\(\{\}\)/);
+  assert.match(app, /showSaveFilePicker\(\{id:"roco-progress-export",suggestedName:"roco-rare-egg-progress\.json"/);
+  assert.match(app, /catch\(error\)\{if\(error instanceof DOMException&&error\.name==="AbortError"\)\{toast\("已取消导出"\);return;\}\}/);
+  assert.match(progressSource, /showSaveFilePicker\?:[\s\S]*?id: string;[\s\S]*?suggestedName: string;/);
+  assert.match(progressSource, /id: "roco-progress-export",[\s\S]*?suggestedName: "roco-rare-egg-progress\.json"/);
   assert.match(style, /\.search-box\s*\{[^}]*min-width:\s*240px[^}]*flex:\s*1 1 300px/s);
   assert.match(style, /\.source-filter-toggle\s*\{[^}]*min-width:\s*190px[^}]*min-height:\s*48px/s);
   assert.match(style, /\.source-filter-toggle\.active\s*\{[^}]*background:\s*#f6f2ff/s);
@@ -265,7 +295,7 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(style, /\.pet-group-tooltip\s*\{[^}]*visibility:\s*hidden/s);
   assert.match(style, /\.pet-form-label\s*\{[^}]*background:\s*#fff6dc/s);
   assert.match(style, /\.availability-tag\.season-limited\s*\{[^}]*#fff0c7/s);
-  assert.match(style, /\.availability-tag\.permanent\s*\{[^}]*#ece9f0/s);
+  assert.match(style, /\.availability-tag\.permanent, \.availability-tag\.battle-pass\s*\{[^}]*#ece9f0/s);
   assert.match(style, /\.inheritance-tag\s*\{[^}]*#fff6d8/s);
   assert.match(style, /\.egg-group-filter-panel,\s*\.series-filter-panel\s*\{[^}]*background:\s*#f7f3eb/s);
   assert.match(style, /\.series-filter-panel\s*\{[^}]*background:\s*#f4f1fa/s);
@@ -324,9 +354,9 @@ test("offline package is self-contained and data-complete", async () => {
   const pets = database.pets;
   const plannerApi = context.window.ROCO_PLANNER;
   assert.equal(database.schemaVersion, 7);
-  assert.equal(pets.length, 59);
-  assert.equal(new Set(pets.map((pet) => pet.key)).size, 59);
-  assert.equal(new Set(pets.map((pet) => pet.name)).size, 57);
+  assert.equal(pets.length, 78);
+  assert.equal(new Set(pets.map((pet) => pet.key)).size, 78);
+  assert.equal(new Set(pets.map((pet) => pet.name)).size, 75);
   assert.equal(database.series.length, 18, "the current catalog should expose all represented pet series");
   assert.ok(pets.every((pet) => Array.isArray(pet.series) && pet.series.length), "every catalog card should have at least one series");
   assert.ok(pets.some((pet) => pet.series.length > 1), "dual-series pets should retain both filter values");
@@ -377,12 +407,14 @@ test("offline package is self-contained and data-complete", async () => {
   assert.equal(exactHybridPlan.slots.filter((slot) => slot.role === "father").length, 2, "the exact branch should find the non-greedy two-father combination");
   assert.equal(exactHybridPlan.pairedMothers, 6, "the exact branch should cover all six mothers when greedy coverage stops at five");
   assert.equal(new Set(exactHybridPlan.edges.flatMap((edge) => [edge.father.pet.key, edge.mother.pet.key])).size, 8, "the exact branch should connect every selected father and mother");
-  assert.ok(exactHybridPlan.pairedMothers > heuristicHybridPlan.pairedMothers, "the exact first option should improve a known greedy counterexample");
+  const exactHybridTargets = new Set(exactHybridPlan.edges.map((edge) => edge.mother.pet.key)).size;
+  const heuristicHybridTargets = new Set(heuristicHybridPlan.edges.map((edge) => edge.mother.pet.key)).size;
+  assert.ok(exactHybridTargets > heuristicHybridTargets, "the exact first option should cover more distinct targets than the known greedy counterexample");
   const battlePassPets = pets.filter((pet) => plannerApi.isBattlePassPet(pet));
-  assert.equal(battlePassPets.length, 6, "current database should identify all six battle-pass pets");
-  assert.deepEqual(Array.from(battlePassPets.map((pet) => pet.name)).sort(), ["爆焰喷喷", "疾光千兽", "离心舞者", "绒仙子", "胡桃王子", "雪怪"].sort());
+  assert.equal(battlePassPets.length, 8, "current database should identify eight battle-pass pets across S1–S4");
+  assert.deepEqual(Array.from(battlePassPets.map((pet) => pet.name)).sort(), ["爆焰喷喷", "疾光千兽", "离心舞者", "绒仙子", "胡桃王子", "雪怪", "月使鹭纳", "圣凯布米龙"].sort());
   assert.ok(battlePassPets.every((pet) => !pet.groups.length), "battle-pass collection targets should not be treated as hatchable targets");
-  assert.equal(pets.filter((pet) => !plannerApi.isBattlePassPet(pet)).length, 53, "excluding battle-pass pets should update the collection denominator");
+  assert.equal(pets.filter((pet) => !plannerApi.isBattlePassPet(pet)).length, 70, "excluding battle-pass pets should update the collection denominator");
   assert.doesNotMatch(plannerCore, /utilization/, "recommendation must not include nest utilization");
   const fullNestOwned = {
     [pets.find((pet) => pet.id === 20).key]: plannerApi.OWN.COMBO_M,
@@ -391,22 +423,33 @@ test("offline package is self-contained and data-complete", async () => {
   const fullNestPlan = planner.makeAutoPlan(fullNestOwned, 10, "all", 0);
   const planOptions = planner.makeAutoPlanOptions(fullNestOwned, 10, "all");
   const planOptionSignatures = planOptions.map((option) => [
-    ...option.slots.map((slot) => `${slot.role}:${slot.pet.key}:${slot.variant}`).sort(),
+    ...option.slots.map((slot) => `${slot.role}:${slot.pet.key}:${slot.variant}:${slot.x},${slot.y}`).sort(),
     ...option.edges.map((edge) => `${edge.father.pet.key}>${edge.mother.pet.key}`).sort(),
   ].join("|"));
   assert.ok(planOptions.length > 1 && planOptions.length <= 5, "a feasible roster should expose a compact row of alternative plans");
-  assert.equal(new Set(planOptionSignatures).size, planOptions.length, "alternative plan buttons must not repeat the same roster and pairing graph");
+  assert.equal(new Set(planOptionSignatures).size, planOptions.length, "alternative plan buttons must not repeat the same layout and pairing graph");
   assert.ok(planOptions.every((option) => option.slots.length === 10), "every selectable plan should keep all configured nests in use");
+  assert.ok(planOptions.every((option) => new Set(option.edges.flatMap((edge) => [edge.father, edge.mother])).size === option.slots.length), "every selectable plan should exclude isolated nests");
   assert.ok(planOptions.every((option, index) => index === 0 || planOptions[index - 1].recommendation >= option.recommendation), "selectable plans should be ordered by recommendation");
-  const connectedMothers = new Set(fullNestPlan.edges.map((edge) => edge.mother.pet.key));
-  const connectedSlots = new Set(fullNestPlan.edges.flatMap((edge) => [
-    `${edge.father.role}:${edge.father.pet.key}:${edge.father.variant}`,
-    `${edge.mother.role}:${edge.mother.pet.key}:${edge.mother.variant}`,
-  ]));
+  const connectedMothers = new Set(fullNestPlan.edges.map((edge) => edge.mother));
+  const connectedSlots = new Set(fullNestPlan.edges.flatMap((edge) => [edge.father, edge.mother]));
   assert.equal(fullNestPlan.slots.length, 10, "a feasible plan should use all configured nests");
   assert.equal(connectedMothers.size, fullNestPlan.slots.filter((slot) => slot.role === "mother").length, "every mother in a full plan should connect to a father");
   assert.equal(connectedSlots.size, fullNestPlan.slots.length, "every used nest should take part in the plan");
-  assert.equal(fullNestPlan.recommendation, 96, "a full nest layout must not receive recommendation points for utilization");
+  assert.equal(fullNestPlan.recommendation, 97, "a fully connected layout should not gain extra recommendation points merely from redundant pair lines");
+  const repeatedMotherPets = [
+    { key: "priority-father-a", name: "priority-father-a", form: "", season: "S3", groups: ["test"], maleTargets: ["limited-a", "limited-b", "limited-c", "permanent-a"], flags: 1, availability: "season-limited", availabilityReason: "test", offspringKey: "priority-father-a" },
+    { key: "priority-father-b", name: "priority-father-b", form: "", season: "S3", groups: ["test"], maleTargets: ["limited-a", "limited-b", "limited-c", "permanent-a"], flags: 1, availability: "season-limited", availabilityReason: "test", offspringKey: "priority-father-b" },
+    ...["limited-a", "limited-b", "limited-c"].map((key) => ({ key, name: key, form: "", season: "S3", groups: ["test"], maleTargets: [], flags: 1, availability: "season-limited", availabilityReason: "test", offspringKey: key })),
+    { key: "permanent-a", name: "permanent-a", form: "", season: "S3", groups: ["test"], maleTargets: [], flags: 1, availability: "permanent", availabilityReason: "test", offspringKey: "permanent-a" },
+  ];
+  const repeatedMotherPlan = plannerApi.createPlanner(repeatedMotherPets).makeAutoPlan({ "priority-father-a": plannerApi.OWN.COMBO_M, "priority-father-b": plannerApi.OWN.COMBO_M }, 7, "all", 0);
+  const repeatedMotherSlots = repeatedMotherPlan.slots.filter((slot) => slot.role === "mother");
+  assert.equal(repeatedMotherPlan.targetTier, "season-limited", "the plan should retain season-limited priority when spare nests also advance a permanent target");
+  assert.equal(repeatedMotherPlan.slots.length, 7, "duplicate mothers should fill every configured nest");
+  assert.equal(new Set(repeatedMotherPlan.edges.flatMap((edge) => [edge.father, edge.mother])).size, 7, "every repeated mother slot should remain connected");
+  assert.ok(repeatedMotherSlots.some((slot) => slot.pet.key === "permanent-a"), "a distinct lower-priority missing target should use a spare nest before adding duplicates");
+  assert.ok(new Set(repeatedMotherSlots.map((slot) => slot.pet.key)).size < repeatedMotherSlots.length, "the planner should repeat compatible mothers when distinct targets do not fill the nest count");
   const limitedPlan = planner.makeAutoPlan({ "红绒十字": plannerApi.OWN.SHINY_M }, 10, "all", 0);
   assert.equal(limitedPlan.targetTier, "season-limited", "现有父本能推进限时异色时，必须先选择限时目标");
   assert.ok(limitedPlan.slots.filter((slot) => slot.role === "mother").every((slot) => slot.pet.availability === "season-limited"));
@@ -416,14 +459,14 @@ test("offline package is self-contained and data-complete", async () => {
   assert.equal(permanentPlan.targetTier, "permanent", "限时可繁育目标集齐后，才应进入常驻补全阶段");
   assert.ok(permanentPlan.slots.some((slot) => slot.role === "mother" && slot.pet.name === "雅丹鬃"));
   const permanentNames = pets.filter((pet) => pet.availability === "permanent").map((pet) => pet.name).sort();
-  assert.deepEqual(Array.from(permanentNames), ["爆焰喷喷", "疾光千兽", "离心舞者", "绒仙子", "胡桃王子", "雅丹鬃", "雪怪"].sort());
+  assert.deepEqual(Array.from(permanentNames), ["雅丹鬃"]);
   assert.equal(pets.find((pet) => pet.name === "雅丹鬃").availabilityReason, "常驻捕捉触发");
-  assert.ok(pets.filter((pet) => permanentNames.includes(pet.name) && pet.name !== "雅丹鬃").every((pet) => !pet.groups.length), "战令常驻异色应保留为不可繁育图鉴卡");
+  assert.ok(battlePassPets.every((pet) => pet.availability === "battle-pass" && !pet.groups.length), "战令应单独分类并保留为不可繁育图鉴卡");
   const eggGroups = new Set(pets.flatMap((pet) => pet.groups));
   assert.equal(eggGroups.size, 14, "蛋组筛选应覆盖当前全部 14 个蛋组");
   assert.ok([...eggGroups].every((group) => pets.some((pet) => pet.groups.includes(group))), "每个筛选蛋组都应有可见精灵");
   assert.ok(pets.some((pet) => !pet.groups.length), "无蛋组筛选应能展示不可繁育目标");
-  assert.equal(petFiles.filter((name) => /\.(?:webp|png)$/i.test(name)).length, 59);
+  assert.equal(petFiles.filter((name) => /\.(?:webp|png)$/i.test(name)).length, 78);
   const armorForms = pets.filter((pet) => pet.name === "千棘盔");
   const mouseForms = pets.filter((pet) => pet.name === "遁地鼠");
   assert.deepEqual(Array.from(armorForms.map((pet) => pet.form)).sort(), ["本来的样子", "磨损的样子"].sort());

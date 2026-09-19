@@ -23,6 +23,16 @@
 .plan-score > span { grid-row: 1 / -1; color: #786e5a; font-size: 10px; font-weight: 700; }
 .plan-score strong { align-self: end; color: #986400; font: 850 18px/1 ui-monospace, monospace; }
 .plan-score small { align-self: start; color: #8b7a5b; font-size: 9px; font-weight: 700; line-height: 1.2; }
+.plan-export-button { min-width: 116px; height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border: 1px solid #d9d2e7; border-radius: 11px; background: #fffefa; color: var(--purple-dark); box-shadow: 0 5px 14px rgba(47,35,89,.07), inset 0 1px 0 rgba(255,255,255,.9); font-size: 11px; font-weight: 800; line-height: 1; white-space: nowrap; cursor: pointer; transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease; }
+.plan-export-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.plan-export-button:hover:not(:disabled) { transform: translateY(-1px); border-color: #bdb2df; background: #f8f5ff; box-shadow: 0 8px 18px rgba(47,35,89,.1), inset 0 1px 0 rgba(255,255,255,.9); }
+.plan-export-button:active:not(:disabled) { transform: translateY(0) scale(.98); }
+.plan-export-button:focus-visible { outline: 3px solid rgba(88,67,220,.2); outline-offset: 2px; }
+.plan-export-button:disabled { cursor: not-allowed; opacity: .48; box-shadow: none; }
+.plan-export-button.state-working { border-color: #cfc6ec; background: #f4f0ff; color: #5946bb; cursor: wait; opacity: 1; }
+.plan-export-button.state-saved, .plan-export-button.state-downloaded { border-color: #b7d7c8; background: #f1faf6; color: #267255; }
+.plan-export-button.state-cancelled { color: var(--muted); }
+.plan-export-button.state-failed { border-color: #efc7cc; background: #fff5f6; color: #b73545; }
 .plan-options-bar { min-height: 68px; display: flex; align-items: center; gap: 18px; padding: 11px 18px; border-bottom: 1px solid var(--line); background: #fbf9f4; }
 .plan-options-label { flex: 0 0 auto; display: grid; gap: 4px; }
 .plan-options-label strong { color: var(--ink); font-size: 12px; line-height: 1; }

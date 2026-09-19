@@ -17,6 +17,25 @@ type StoredProgress = {
   excludeBattlePass?: boolean;
 };
 
+type SaveFilePickerWindow = Window & {
+  showSaveFilePicker?: (options: {
+    id: string;
+    suggestedName: string;
+    types: Array<{ description: string; accept: Record<string, string[]> }>;
+  }) => Promise<FileSystemFileHandle>;
+};
+
+function downloadProgress(payload: string) {
+  const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "roco-rare-egg-progress.json";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 export function usePlannerProgress() {
   const [owned, setOwned] = useState<OwnedMap>({});
   const [nestCount, setNestCount] = useState(10);
@@ -70,15 +89,32 @@ export function usePlannerProgress() {
     setOwned((current) => ({ ...current, [key]: (current[key] || 0) ^ bit }));
   }
 
-  function exportProgress() {
-    const payload = JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, excludeBattlePass, exportedAt: new Date().toISOString() }, null, 2);
-    const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "roco-rare-egg-progress.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
-    setToast("进度文件已导出");
+  async function exportProgress() {
+    const buildPayload = () => JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, excludeBattlePass, exportedAt: new Date().toISOString() }, null, 2);
+    const savePicker = (window as SaveFilePickerWindow).showSaveFilePicker;
+
+    if (savePicker) {
+      try {
+        const fileHandle = await savePicker.call(window, {
+          id: "roco-progress-export",
+          suggestedName: "roco-rare-egg-progress.json",
+          types: [{ description: "洛克王国珍稀孵蛋规划进度", accept: { "application/json": [".json"] } }],
+        });
+        const writable = await fileHandle.createWritable();
+        await writable.write(buildPayload());
+        await writable.close();
+        setToast("进度文件已保存");
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          setToast("已取消导出");
+          return;
+        }
+      }
+    }
+
+    downloadProgress(buildPayload());
+    setToast("另存为不可用，已改用浏览器下载");
   }
 
   function importProgress(event: ChangeEvent<HTMLInputElement>) {

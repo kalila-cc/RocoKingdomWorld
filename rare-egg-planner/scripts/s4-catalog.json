@@ -1,0 +1,28 @@
+{
+  "source": "https://wiki.biligame.com/nrc/Module:Pets/data/Catalog",
+  "avatarSource": "https://wiki.biligame.com/nrc/孵蛋组别查询",
+  "verifiedAt": "2026-09-19",
+  "policy": "用户确认：仅雅丹鬃常驻；每赛季两个战令，其余赛季异色；新增默认双性别、后代继承形态，保留已知例外。",
+  "columns": ["baseId", "name", "form", "series", "groups", "chain", "avatarPath"],
+  "rows": [
+    [3147,"幻影灵菇","",["幽","草"],["植物组","魔力组"],["小灵菇","幻灵菇","幻影灵菇"],"a/ad/finafcj5n606yit4f65enkh0c656oys.png"],
+    [3569,"黑猫巫师","",["普通"],["动物组","妖精组"],["小黑猫","黑猫巫师"],"c/c4/6jckmrkczcmdfc28srqwlzsaey15fmc.png"],
+    [3375,"梦想三三","",["萌"],["动物组","巨灵组"],["逗逗","气球猫","梦想三三"],"a/af/29i0tt45wwj5jr78z6cpd6iw1co0i3s.png"],
+    [3583,"月亮砣","上弦的样子",["毒","萌"],["海洋组"],["刺轮砣","月亮砣"],"5/59/0hxb61wgx5rjy6r9y626im3xubkm5rj.png"],
+    [3585,"月亮砣","下弦的样子",["毒","萌"],["海洋组"],["刺轮砣","月亮砣"],"a/ad/fxwmw3pxyavhnpo87m5cx487v0jnedg.png"],
+    [3753,"飞飞钥","",["机械","虫"],["昆虫组","机械组"],["叮叮卯","飞飞钥"],"8/81/b1qhzuyqv04v4kajyk7ytn6xuhhw2ss.png"],
+    [3185,"邪眼巨魔","",["恶","虫"],["巨灵组","昆虫组"],["瑰眼仔","耳翎瑰魅","邪眼巨魔"],"b/ba/r2v3x3bicq1ankzszntjgt9bbms96iq.png"],
+    [3323,"夜游魔","",["翼","恶"],["巨灵组","天空组"],["觅觅蝠","翻翻蝠","夜游魔"],"8/8b/lndri9funogm7hputt66a97mdfjmxfg.png"],
+    [3349,"障眼魔","",["恶","水"],["巨灵组","妖精组"],["芽眼魔","叶眼魔","障眼魔"],"7/79/sfwbwqnjbbzq48yeanr6mhg8v12fw1n.png"],
+    [3766,"月使鹭纳","",["翼","冰"],[],["新月鹭","月辉鹭","月使鹭纳"],"1/18/05wtxban1fs52kbz8c8fd3adtvpu5l2.png"],
+    [3576,"圣凯布米龙","",["火","虫"],[],["热团团","焰米龙","圣凯布米龙"],"f/f4/in79g7pw3nhm44c2kmus68tfm80yelb.png"],
+    [3768,"智辉章脑","",["光","水"],["妖精组","软体组"],["章脑丸","智辉章脑"],"8/8b/7m08f4l9dnpx04bvb7q1lasijz7bm4k.png"],
+    [3542,"未完虫","",["幽","虫"],["昆虫组","魔力组"],["未完虫"],"b/b8/skwp0olt1a3p76h5kcm7qpifu6fy6ee.png"],
+    [3590,"玳塔","",["幻"],["巨灵组","两栖组"],["玳龟","玳塔"],"3/37/7kyda3qjk2k6g6dxerz1ilsisfgu8r8.png"],
+    [3664,"测风蝉","",["翼","机械"],["昆虫组","机械组"],["量风碗","测风蝉"],"2/2e/4khk1653161pny0m7daa6cqmwknogg6.png"],
+    [3772,"黑手浣熊","",["恶"],["动物组","拟人组"],["小浣蛋","黑手浣熊"],"f/f8/o7ifokvogvjpeb5z9uzyslfdyq6pgdp.png"],
+    [3774,"摇铃魔偶","",["幽"],["妖精组","魔力组"],["幽铃","摇铃魔偶"],"d/dd/aslomz5hd092dapwi7i76cpvi87i3ld.png"],
+    [3236,"星星眼","",["幻"],["天空组","大地组"],["星星眼"],"8/85/lcuxjujwaffje5ssrc3xe8458s63fp9.png"],
+    [3776,"布灵布灵","",["幻","光"],["妖精组"],["布灵","布灵布灵"],"7/7c/niht4umia81wro5e67ep96a2cx0fdj9.png"]
+  ]
+}

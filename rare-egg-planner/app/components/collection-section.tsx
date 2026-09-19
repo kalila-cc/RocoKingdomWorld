@@ -49,7 +49,7 @@ function PetCard({ pet, ownedMask, onToggleOwned }: { pet: Pet; ownedMask: numbe
       <div className="pet-visual">
         <PetImage pet={pet} />
         <span className="season-tag">{pet.season.slice(0, 2)}</span>
-        <span className={`availability-tag ${pet.availability}`}>{pet.availability === "permanent" ? "常驻 · 低优" : "限时 · 优先"}</span>
+        <span className={`availability-tag ${pet.availability}`}>{isBattlePassPet(pet) ? "战令异色" : pet.availability === "permanent" ? "常驻 · 低优" : "限时 · 优先"}</span>
         {Boolean(ownedMask) && <span className="owned-tag">已登记</span>}
         {disabled && <span className="lock-tag">不可繁育</span>}
         {offspring && <span className="inheritance-tag">后代不继承此形态</span>}

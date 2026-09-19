@@ -1,6 +1,9 @@
-import { type CSSProperties } from "react";
+"use client";
+
+import { type CSSProperties, useEffect, useState } from "react";
 import Image from "next/image";
 import { PETS } from "../data";
+import { exportPlanImage } from "../plan-image-export";
 import {
   TARGET_LABEL,
   VARIANT_LABEL,
@@ -33,6 +36,28 @@ type PlannerSectionProps = {
 export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, focus, seasonKeys, maleCount, onDecreaseNest, onIncreaseNest, onFocusChange, onPlanChange, onOpenCatalog }: PlannerSectionProps) {
   const activeKind = plan.kind;
   const motherKeys = Array.from(new Set(plan.edges.map((edge) => petKey(edge.mother.pet))));
+  const [imageExportState, setImageExportState] = useState<"idle" | "working" | "saved" | "downloaded" | "cancelled" | "failed">("idle");
+  const exportLabel = imageExportState === "working" ? "正在生成…" : imageExportState === "saved" ? "图片已保存" : imageExportState === "downloaded" ? "已开始下载" : imageExportState === "cancelled" ? "已取消" : imageExportState === "failed" ? "导出失败" : "导出图片";
+
+  useEffect(() => {
+    if (imageExportState === "idle" || imageExportState === "working") return;
+    const timer = window.setTimeout(() => setImageExportState("idle"), 2400);
+    return () => window.clearTimeout(timer);
+  }, [imageExportState]);
+
+  async function handleExportImage() {
+    if (!plan.slots.length || imageExportState === "working") return;
+    setImageExportState("working");
+    const result = await exportPlanImage({
+      plan,
+      planIndex: activePlanIndex,
+      focus,
+      petImageBase: "/pets/",
+      traitImageBase: "/assets/traits/",
+    });
+    setImageExportState(result === "empty" ? "failed" : result);
+  }
+
   return (
     <section className="planner-section" id="plan">
       <div className="section-heading solo"><div><p className="eyebrow">SMART NEST LAYOUT</p><h2>当前推荐摆窝方案</h2></div></div>
@@ -52,6 +77,10 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
             <div className="plan-score" aria-label={`当前方案推荐度 ${plan.recommendation}%`}>
               <span>推荐度</span><strong>{plan.recommendation ? `${plan.recommendation}%` : "--"}</strong><small>{plan.targetTier === "season-limited" ? "限时异色优先" : plan.targetTier === "permanent" ? "常驻异色补全" : `${TARGET_LABEL[activeKind]}方案`}</small>
             </div>
+            <button className={`plan-export-button state-${imageExportState}`} type="button" disabled={!plan.slots.length || imageExportState === "working"} onClick={handleExportImage} aria-label="将当前摆窝方案导出为 PNG 图片">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 15v4h14v-4" /></svg>
+              <span aria-live="polite">{exportLabel}</span>
+            </button>
           </div>
 
           <div className="plan-options-bar">
@@ -114,7 +143,8 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
               const edges = plan.edges.filter((edge) => petKey(edge.mother.pet) === key);
               const fathers = Array.from(new Set(edges.map((edge) => petKey(edge.father.pet))));
               const motherVariant = edges[0].mother.variant;
-              return <div className="egg-item" key={key}><span className="egg-number">{String(index + 1).padStart(2, "0")}</span><PetImage pet={mother} /><div><strong>{petLabel(mother)}</strong><small>{VARIANT_LABEL[motherVariant]}母本 · {commonGroup(PET_MAP.get(fathers[0])!, mother)} · 可与 {fathers.length} 只父本配对</small></div></div>;
+              const motherCount = new Set(edges.map((edge) => edge.mother)).size;
+              return <div className="egg-item" key={key}><span className="egg-number">{String(index + 1).padStart(2, "0")}</span><PetImage pet={mother} /><div><strong>{petLabel(mother)}</strong><small>放置 {motherCount} 个{VARIANT_LABEL[motherVariant]}母本 · {commonGroup(PET_MAP.get(fathers[0])!, mother)} · 可与 {fathers.length} 只父本配对</small></div></div>;
             })}
             {!plan.edges.length && <p className="panel-empty">完成图鉴登记后，推荐目标会显示在这里。</p>}
           </div>

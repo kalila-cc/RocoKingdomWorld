@@ -16,6 +16,7 @@ try {
   $database = $result.Database
 
   $current = Read-CurrentDatabase -DataPath $currentDataPath
+  Assert-NoCatalogRegression -Current $current -Database $database
   $currentCount = if ($current) { @($current.pets).Count } else { 0 }
   $currentVersion = if ($current -and $current.updatedAt) { [string]$current.updatedAt } else { "未知" }
   $remoteCount = @($database.pets).Count

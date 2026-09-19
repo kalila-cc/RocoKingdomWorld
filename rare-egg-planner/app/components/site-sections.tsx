@@ -53,7 +53,7 @@ export function HeroSection({ shinyCount, colorfulCount, comboCount, onModuleCha
 export function ResourcesSection() {
   return (
     <section className="resources-section" aria-label="参考资料">
-      <a className="wiki-reference" href="https://wiki.biligame.com/rocom/%E9%A6%96%E9%A1%B5" target="_blank" rel="noreferrer" title="前往洛克王国世界 Bwiki"><span>资料参考</span><strong>洛克王国世界 Bwiki</strong><i aria-hidden="true" /></a>
+      <a className="wiki-reference" href="https://wiki.biligame.com/nrc/" target="_blank" rel="noreferrer" title="前往洛克王国世界 Bwiki"><span>资料参考</span><strong>洛克王国世界 Bwiki</strong><i aria-hidden="true" /></a>
     </section>
   );
 }

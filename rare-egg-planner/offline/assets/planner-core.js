@@ -20,6 +20,8 @@ function prefersCandidate(candidate, current) {
     const candidateRank = [
         Number(candidate.fillsRequestedNests),
         Number(candidate.allNestsConnected),
+        candidate.priorityTargets,
+        candidate.distinctTargets,
         candidate.pairedMothers,
         candidate.connectedSlots,
         candidate.edges.length,
@@ -28,6 +30,8 @@ function prefersCandidate(candidate, current) {
     const currentRank = [
         Number(current.fillsRequestedNests),
         Number(current.allNestsConnected),
+        current.priorityTargets,
+        current.distinctTargets,
         current.pairedMothers,
         current.connectedSlots,
         current.edges.length,
@@ -301,6 +305,7 @@ function createPlanner(pets) {
         }
         const scoreArrangement = (arrangement) => {
             let coveredMotherMask = 0;
+            let connectedSlotMask = 0;
             let edges = 0;
             adjacentPositionPairs.forEach(([firstPosition, secondPosition]) => {
                 const firstItem = arrangement[firstPosition];
@@ -308,6 +313,7 @@ function createPlanner(pets) {
                 if (!pairable[firstItem][secondItem])
                     return;
                 edges += 1;
+                connectedSlotMask |= (1 << firstItem) | (1 << secondItem);
                 const motherIndex = roster[firstItem].role === "mother" ? firstItem : secondItem;
                 coveredMotherMask |= 1 << motherIndex;
             });
@@ -316,7 +322,12 @@ function createPlanner(pets) {
                 coveredMotherMask &= coveredMotherMask - 1;
                 coveredMothers += 1;
             }
-            return coveredMothers * 100 + edges * 8;
+            let connectedSlots = 0;
+            while (connectedSlotMask) {
+                connectedSlotMask &= connectedSlotMask - 1;
+                connectedSlots += 1;
+            }
+            return connectedSlots * 1000 + coveredMothers * 100 + edges * 8;
         };
         const starts = [
             itemIndexes,
@@ -437,6 +448,38 @@ function createPlanner(pets) {
             || b.futureReach - a.futureReach
             || b.tieBreaker - a.tieBreaker);
         return ranked;
+    }
+    function expandMotherCandidates(primaryCandidates, secondaryCandidates, count, salt) {
+        if (!primaryCandidates.length || count <= 0)
+            return [];
+        const selected = [...primaryCandidates, ...secondaryCandidates].slice(0, count);
+        const duplicatePool = [...primaryCandidates].sort((a, b) => b.compatible - a.compatible
+            || b.traitValue - a.traitValue
+            || ((b.tieBreaker + salt) % 97) - ((a.tieBreaker + salt) % 97));
+        let duplicateIndex = salt % duplicatePool.length;
+        while (selected.length < count) {
+            selected.push(duplicatePool[duplicateIndex % duplicatePool.length]);
+            duplicateIndex += 1;
+        }
+        return selected;
+    }
+    function candidateMetrics(slots, edges, nestCount, maleCount, isPriorityTarget) {
+        const connectedMotherSlots = new Set(edges.map((edge) => edge.mother));
+        const connectedSlots = new Set(edges.flatMap((edge) => [edge.father, edge.mother])).size;
+        const connectedTargets = new Set([...connectedMotherSlots].map((slot) => petKey(slot.pet)));
+        const priorityTargets = new Set([...connectedMotherSlots].filter((slot) => isPriorityTarget(slot.pet)).map((slot) => petKey(slot.pet))).size;
+        const fillsRequestedNests = slots.length === nestCount;
+        return {
+            slots,
+            edges,
+            fillsRequestedNests,
+            allNestsConnected: fillsRequestedNests && connectedSlots === slots.length,
+            pairedMothers: connectedMotherSlots.size,
+            priorityTargets,
+            distinctTargets: connectedTargets.size,
+            connectedSlots,
+            maleCount,
+        };
     }
     function assignmentWeights(profile, pattern) {
         return pattern.neighborMasks.map((neighborMask) => {
@@ -567,21 +610,24 @@ function createPlanner(pets) {
         }
         return occupied === 0 && connectedFathers === 0 && assignment.every((profile) => profile > 0) ? assignment : null;
     }
-    function makeExactCandidate(males, targets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier) {
+    function makeExactCandidate(males, targets, secondaryTargets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier) {
         let best = null;
         let bestTieScore = -1;
         const maxMales = Math.min(males.length, nestCount - 1, exports.EXACT_PARENT_LIMIT);
         for (let maleCount = 1; maleCount <= maxMales; maleCount += 1) {
             forEachCombination(males, maleCount, (chosenMales) => {
                 const rankedTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier);
-                const motherCount = Math.min(nestCount - maleCount, rankedTargets.length);
-                if (!motherCount)
+                if (!rankedTargets.length)
+                    return;
+                const rankedSecondaryTargets = rankMotherCandidates(chosenMales, secondaryTargets, owned, kind, salt, isMissingObjective, () => true);
+                const motherCount = nestCount - maleCount;
+                const expandedTargets = expandMotherCandidates(rankedTargets, rankedSecondaryTargets, motherCount, salt);
+                if (expandedTargets.length !== motherCount)
                     return;
                 const candidatesByProfile = new Map();
-                rankedTargets.forEach((item) => {
+                expandedTargets.forEach((item) => {
                     const candidates = candidatesByProfile.get(item.profile) || [];
-                    if (candidates.length < motherCount)
-                        candidates.push(item);
+                    candidates.push(item);
                     candidatesByProfile.set(item.profile, candidates);
                 });
                 const profileCounts = new Map([...candidatesByProfile].map(([profile, candidates]) => [profile, candidates.length]));
@@ -630,11 +676,7 @@ function createPlanner(pets) {
                     })),
                 ];
                 const edges = buildEdges(slots);
-                const pairedMothers = new Set(edges.map((edge) => petKey(edge.mother.pet))).size;
-                const connectedSlots = new Set(edges.flatMap((edge) => [edge.father, edge.mother])).size;
-                const fillsRequestedNests = slots.length === nestCount;
-                const allNestsConnected = fillsRequestedNests && connectedSlots === slots.length;
-                const candidate = { slots, edges, fillsRequestedNests, allNestsConnected, pairedMothers, connectedSlots, maleCount };
+                const candidate = candidateMetrics(slots, edges, nestCount, maleCount, isCurrentTier);
                 const tied = best && !prefersCandidate(candidate, best) && !prefersCandidate(best, candidate);
                 if (!best || prefersCandidate(candidate, best) || (tied && selectedScore > bestTieScore)) {
                     best = candidate;
@@ -664,6 +706,9 @@ function createPlanner(pets) {
         const isMissingObjective = (pet) => !ownsKind(owned[petKey(pet)], objective);
         const isCurrentTier = (pet) => tierMatches(pet, objective, targetTier);
         const targets = pets.filter((pet) => isMissingObjective(pet) && isEggTarget(pet) && isCurrentTier(pet) && seasonMatches(pet, focus));
+        const secondaryTargets = objective === "shiny" && targetTier === "season-limited"
+            ? pets.filter((pet) => isMissingObjective(pet) && isEggTarget(pet) && pet.availability === "permanent" && seasonMatches(pet, focus))
+            : [];
         const allMissing = pets.filter((pet) => isMissingObjective(pet) && isEggTarget(pet) && isCurrentTier(pet));
         const males = effectiveMaleParents(owned, kind, targets);
         const direct = new Set();
@@ -691,32 +736,30 @@ function createPlanner(pets) {
                 return cached;
         }
         let best = exactCacheKey
-            ? makeExactCandidate(males, targets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier)
+            ? makeExactCandidate(males, targets, secondaryTargets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier)
             : null;
         if (!best) {
             const maxMales = Math.min(males.length, nestCount - 1, exports.EXACT_PARENT_LIMIT);
             for (let maleCount = 1; maleCount <= maxMales; maleCount += 1) {
                 const chosenMales = chooseMales(males, targets, owned, kind, maleCount, salt);
                 const motherCount = nestCount - chosenMales.length;
-                const chosenTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier).slice(0, motherCount);
+                const rankedTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier);
+                const rankedSecondaryTargets = rankMotherCandidates(chosenMales, secondaryTargets, owned, kind, salt, isMissingObjective, () => true);
+                const chosenTargets = expandMotherCandidates(rankedTargets, rankedSecondaryTargets, motherCount, salt);
                 const roster = [
                     ...chosenMales.map((parent) => ({ pet: parent.pet, variant: parent.variant, targetKind: kind, role: "father" })),
                     ...chosenTargets.map((item) => ({ pet: item.pet, variant: item.variant, targetKind: kind, role: "mother" })),
                 ];
                 const slots = optimizeLayout(roster, salt);
                 const edges = buildEdges(slots);
-                const pairedMothers = new Set(edges.map((edge) => petKey(edge.mother.pet))).size;
-                const connectedSlots = new Set(edges.flatMap((edge) => [edge.father, edge.mother])).size;
-                const fillsRequestedNests = slots.length === nestCount;
-                const allNestsConnected = fillsRequestedNests && connectedSlots === slots.length;
-                const candidate = { slots, edges, fillsRequestedNests, allNestsConnected, pairedMothers, connectedSlots, maleCount: chosenMales.length };
+                const candidate = candidateMetrics(slots, edges, nestCount, chosenMales.length, isCurrentTier);
                 if (!best || prefersCandidate(candidate, best))
                     best = candidate;
             }
         }
         const slots = best?.slots || [];
         const edges = best?.edges || [];
-        const pairedMothers = new Set(edges.map((edge) => petKey(edge.mother.pet))).size;
+        const pairedMothers = new Set(edges.map((edge) => edge.mother)).size;
         const result = { objective, targetTier, slots, edges, pairedMothers, targetCount: targets.length, directCount: direct.size, uncovered: allMissing.length - direct.size };
         if (exactCacheKey) {
             exactPlanCache.set(exactCacheKey, result);
@@ -731,7 +774,7 @@ function createPlanner(pets) {
         const base = { combo: 82, shiny: 72, colorful: 64 }[kind];
         const motherSlots = plan.slots.filter((slot) => slot.role === "mother").length;
         const coverage = plan.pairedMothers / Math.max(1, motherSlots);
-        const connectivity = Math.min(1, plan.edges.length / Math.max(1, plan.pairedMothers * 2));
+        const connectivity = Math.min(1, plan.edges.length / Math.max(1, plan.pairedMothers));
         const urgency = plan.targetTier === "season-limited" ? 4 : plan.targetTier === "permanent" ? -6 : 0;
         return Math.min(99, Math.max(1, Math.round(base + coverage * 7 + connectivity * 4 + urgency)));
     }
@@ -742,10 +785,17 @@ function createPlanner(pets) {
                 : selected.plan;
             return { ...plan, kind: selected.kind, recommendation: recommendationFor(plan, selected.kind) };
         };
+        const distinctMotherTargets = (plan, priorityOnly = false) => new Set(plan.edges
+            .filter((edge) => !priorityOnly || tierMatches(edge.mother.pet, plan.objective, plan.targetTier))
+            .map((edge) => petKey(edge.mother.pet))).size;
         const rankedShinyPlans = (targetTier) => ["combo", "shiny"]
             .map((kind) => ({ kind, plan: makePlan(owned, nestCount, focus, kind, salt, "shiny", targetTier) }))
             .filter(({ plan }) => plan.slots.length > 0 && plan.pairedMothers > 0)
-            .sort((a, b) => b.plan.pairedMothers - a.plan.pairedMothers || b.plan.edges.length - a.plan.edges.length || exports.AUTO_PRIORITY.indexOf(a.kind) - exports.AUTO_PRIORITY.indexOf(b.kind));
+            .sort((a, b) => distinctMotherTargets(b.plan, true) - distinctMotherTargets(a.plan, true)
+            || distinctMotherTargets(b.plan) - distinctMotherTargets(a.plan)
+            || b.plan.pairedMothers - a.plan.pairedMothers
+            || b.plan.edges.length - a.plan.edges.length
+            || exports.AUTO_PRIORITY.indexOf(a.kind) - exports.AUTO_PRIORITY.indexOf(b.kind));
         for (const targetTier of ["season-limited", "permanent"]) {
             const selected = rankedShinyPlans(targetTier)[0];
             if (selected)
@@ -769,30 +819,75 @@ function createPlanner(pets) {
         const attempts = Math.max(24, optionLimit * 8);
         const maxStagnantAttempts = Math.max(6, optionLimit);
         let stagnantAttempts = 0;
+        const signatureFor = (plan) => [
+            plan.kind,
+            plan.objective,
+            plan.targetTier,
+            ...plan.slots.map((slot) => `${slot.role}:${petKey(slot.pet)}:${slot.variant}:${slot.x},${slot.y}`).sort(),
+            ...plan.edges.map((edge) => `${petKey(edge.father.pet)}>${petKey(edge.mother.pet)}`).sort(),
+        ].join("|");
+        const addCandidate = (plan, salt) => {
+            const connectedSlots = new Set(plan.edges.flatMap((edge) => [edge.father, edge.mother])).size;
+            if (plan.slots.length !== nestCount || connectedSlots !== plan.slots.length)
+                return false;
+            const signature = signatureFor(plan);
+            if (seen.has(signature))
+                return false;
+            seen.add(signature);
+            candidates.push({ plan, salt });
+            return true;
+        };
         for (let salt = 0; salt < attempts && candidates.length < optionLimit; salt += 1) {
             const plan = makeAutoPlan(owned, nestCount, focus, salt);
-            const signature = [
-                plan.kind,
-                plan.objective,
-                plan.targetTier,
-                ...plan.slots.map((slot) => `${slot.role}:${petKey(slot.pet)}:${slot.variant}`).sort(),
-                ...plan.edges.map((edge) => `${petKey(edge.father.pet)}>${petKey(edge.mother.pet)}`).sort(),
-            ].join("|");
-            if (seen.has(signature)) {
+            if (!addCandidate(plan, salt)) {
                 stagnantAttempts += 1;
                 if (stagnantAttempts >= maxStagnantAttempts)
                     break;
                 continue;
             }
             stagnantAttempts = 0;
-            seen.add(signature);
-            candidates.push({ plan, salt });
+        }
+        if (!candidates.length)
+            return [makeAutoPlan(owned, nestCount, focus, 0)];
+        if (candidates.length < optionLimit) {
+            const base = candidates[0].plan;
+            const maxX = Math.max(...base.slots.map((slot) => slot.x));
+            const maxY = Math.max(...base.slots.map((slot) => slot.y));
+            const transforms = [
+                (slot) => ({ x: maxX - slot.x, y: slot.y }),
+                (slot) => ({ x: slot.x, y: maxY - slot.y }),
+                (slot) => ({ x: maxX - slot.x, y: maxY - slot.y }),
+            ];
+            transforms.forEach((transform, index) => {
+                if (candidates.length >= optionLimit)
+                    return;
+                const slotMap = new Map();
+                const slots = base.slots.map((slot) => {
+                    const position = transform(slot);
+                    const transformed = { ...slot, ...position };
+                    slotMap.set(slot, transformed);
+                    return transformed;
+                });
+                const edges = base.edges.map((edge) => ({
+                    ...edge,
+                    father: slotMap.get(edge.father),
+                    mother: slotMap.get(edge.mother),
+                }));
+                addCandidate({ ...base, slots, edges }, attempts + index);
+            });
         }
         return candidates
-            .sort((a, b) => b.plan.recommendation - a.plan.recommendation
-            || b.plan.pairedMothers - a.plan.pairedMothers
-            || b.plan.edges.length - a.plan.edges.length
-            || a.salt - b.salt)
+            .sort((a, b) => {
+            const distinctTargets = (plan, priorityOnly = false) => new Set(plan.edges
+                .filter((edge) => !priorityOnly || tierMatches(edge.mother.pet, plan.objective, plan.targetTier))
+                .map((edge) => petKey(edge.mother.pet))).size;
+            return distinctTargets(b.plan, true) - distinctTargets(a.plan, true)
+                || distinctTargets(b.plan) - distinctTargets(a.plan)
+                || b.plan.pairedMothers - a.plan.pairedMothers
+                || b.plan.recommendation - a.plan.recommendation
+                || b.plan.edges.length - a.plan.edges.length
+                || a.salt - b.salt;
+        })
             .slice(0, optionLimit)
             .map(({ plan }) => plan);
     }

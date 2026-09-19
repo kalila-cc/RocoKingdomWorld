@@ -36,7 +36,7 @@
   </section>
 
   <section class="resources-section" aria-label="参考资料">
-    <a class="wiki-reference" href="https://wiki.biligame.com/rocom/%E9%A6%96%E9%A1%B5" target="_blank" title="前往洛克王国世界 Bwiki"><span>资料参考</span><strong>洛克王国世界 Bwiki</strong><i aria-hidden="true"></i></a>
+    <a class="wiki-reference" href="https://wiki.biligame.com/nrc/" target="_blank" title="前往洛克王国世界 Bwiki"><span>资料参考</span><strong>洛克王国世界 Bwiki</strong><i aria-hidden="true"></i></a>
   </section>
   </div>
 
@@ -47,8 +47,9 @@
       <article class="nest-card">
         <div class="nest-toolbar">
           <div class="control-block"><span class="control-label">小窝总数</span><div class="stepper"><button id="nestMinus" type="button">−</button><strong id="nestValue">10</strong><button id="nestPlus" type="button">＋</button></div></div>
-          <div class="control-block focus-control"><span class="control-label">目标赛季</span><div class="pill-switch" id="focusSwitch"><button class="active" data-focus="all">全部</button><button data-focus="S1">S1</button><button data-focus="S2">S2</button><button data-focus="S3">S3</button></div></div>
+          <div class="control-block focus-control"><span class="control-label">目标赛季</span><div class="pill-switch" id="focusSwitch"><button class="active" data-focus="all">全部</button><button data-focus="S1">S1</button><button data-focus="S2">S2</button><button data-focus="S3">S3</button><button data-focus="S4">S4</button></div></div>
           <div class="plan-score" id="planScore" aria-label="当前方案推荐度"><span>推荐度</span><strong id="recommendationScore">--</strong><small id="recommendationKind">自动方案</small></div>
+          <button class="plan-export-button state-idle" id="exportPlanBtn" type="button" disabled aria-label="将当前摆窝方案导出为 PNG 图片"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 15v4h14v-4"></path></svg><span id="exportPlanLabel" aria-live="polite">导出图片</span></button>
         </div>
         <div class="plan-options-bar"><div class="plan-options-label"><strong>可选方案</strong><small id="planOptionsStatus">当前仅生成 1 个可用方案</small></div><div class="plan-option-switch" id="planOptions" role="group" aria-label="摆窝可选方案"></div></div>
         <div class="nest-map empty" id="nestMap"><div class="map-grid"></div><div class="distance-key"><span></span> 连线表示两只精灵同蛋组，且窝位横、竖或斜向相邻</div></div>
@@ -69,7 +70,7 @@
     <div class="catalog-stats"><div><strong id="statOwned">0</strong><span>已拥有异色</span></div><div><strong id="statMale">0</strong><span>已拥有炫彩</span></div><div><strong id="statMissing">0</strong><span>已拥有异色炫彩</span></div><div><strong id="statOther">0</strong><span>需通过其他渠道</span></div><p id="saveStatus">已自动保存到本机</p></div>
     <div class="catalog-toolbar">
       <label class="search-box"><span>⌕</span><input id="searchInput" placeholder="搜索精灵、系别或蛋组" aria-label="搜索精灵、系别或蛋组"></label>
-      <div class="filter-group" id="seasonFilter"><button class="active" data-value="all">全部赛季</button><button data-value="S1">S1</button><button data-value="S2">S2</button><button data-value="S3">S3</button></div>
+      <div class="filter-group" id="seasonFilter"><button class="active" data-value="all">全部赛季</button><button data-value="S1">S1</button><button data-value="S2">S2</button><button data-value="S3">S3</button><button data-value="S4">S4</button></div>
       <div class="filter-group gender-filter" id="genderFilter" role="group" aria-label="已登记性别筛选"><button class="active" data-value="all" aria-pressed="true">全部性别</button><button data-value="male" aria-pressed="false">雄性</button><button data-value="female" aria-pressed="false">雌性</button></div>
       <div class="filter-group view" id="viewFilter"><button class="active" data-value="all">全部</button><button data-value="owned">已拥有</button><button data-value="missing">未拥有</button></div>
       <button class="source-filter-toggle" id="battlePassFilter" type="button" aria-pressed="false"><span aria-hidden="true"></span><span><strong>排除战令精灵</strong><small id="battlePassFilterStatus">当前参与统计与推荐</small></span></button>
@@ -91,6 +92,8 @@
 </main>
 <script src="assets/data.js"></script>
 <script src="assets/planner-core.js"></script>
+<script src="assets/plan-image-assets.js"></script>
+<script src="assets/plan-image-export.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
