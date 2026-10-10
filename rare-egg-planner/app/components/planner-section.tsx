@@ -20,6 +20,7 @@ const PET_MAP = new Map(PETS.map((pet) => [petKey(pet), pet]));
 
 type PlannerSectionProps = {
   plan: Plan;
+  hasFavorites: boolean;
   planOptions: Plan[];
   activePlanIndex: number;
   nestCount: number;
@@ -33,7 +34,7 @@ type PlannerSectionProps = {
   onOpenCatalog: () => void;
 };
 
-export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, focus, seasonKeys, maleCount, onDecreaseNest, onIncreaseNest, onFocusChange, onPlanChange, onOpenCatalog }: PlannerSectionProps) {
+export function PlannerSection({ plan, hasFavorites, planOptions, activePlanIndex, nestCount, focus, seasonKeys, maleCount, onDecreaseNest, onIncreaseNest, onFocusChange, onPlanChange, onOpenCatalog }: PlannerSectionProps) {
   const activeKind = plan.kind;
   const motherKeys = Array.from(new Set(plan.edges.map((edge) => petKey(edge.mother.pet))));
   const [imageExportState, setImageExportState] = useState<"idle" | "working" | "saved" | "downloaded" | "cancelled" | "failed">("idle");
@@ -61,6 +62,7 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
   return (
     <section className="planner-section" id="plan">
       <div className="section-heading solo"><div><p className="eyebrow">SMART NEST LAYOUT</p><h2>当前推荐摆窝方案</h2></div></div>
+      {hasFavorites && <p className="favorite-help" role="status">{plan.targetTier === "favorite" ? "偏爱优先：未收集异色时，每种偏爱目标至多安排一个母本，兼顾补全；收集完成后可重复安排偏爱母本。偏爱目标尝试异色炫彩，不代表必出。" : "当前偏爱目标受赛季、排除战令、繁育规则或已登记亲本限制，暂无可用的异色炫彩组合，已尝试常规收集推荐。"}</p>}
       <div className="planner-grid">
         <article className="nest-card">
           <div className="nest-toolbar">
@@ -75,7 +77,7 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
               </div>
             </div>
             <div className="plan-score" aria-label={`当前方案推荐度 ${plan.recommendation}%`}>
-              <span>推荐度</span><strong>{plan.recommendation ? `${plan.recommendation}%` : "--"}</strong><small>{plan.targetTier === "season-limited" ? "限时异色优先" : plan.targetTier === "permanent" ? "常驻异色补全" : `${TARGET_LABEL[activeKind]}方案`}</small>
+              <span>推荐度</span><strong>{plan.recommendation ? `${plan.recommendation}%` : "--"}</strong><small>{plan.targetTier === "favorite" ? "偏爱异色炫彩" : plan.targetTier === "season-limited" ? "限时异色优先" : plan.targetTier === "permanent" ? "常驻异色补全" : `${TARGET_LABEL[activeKind]}方案`}</small>
             </div>
             <button className={`plan-export-button state-${imageExportState}`} type="button" disabled={!plan.slots.length || imageExportState === "working"} onClick={handleExportImage} aria-label="将当前摆窝方案导出为 PNG 图片">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 15v4h14v-4" /></svg>
@@ -106,7 +108,7 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
             {plan.slots.map((slot) => {
               const pos = slotPoint(slot);
               return (
-                <div key={`${slot.role}-${petKey(slot.pet)}-${slot.variant}`} className={`nest-slot ${slot.role} variant-${slot.variant}`} style={{ "--left": `${pos.left}%`, "--top": `${pos.top}%` } as CSSProperties} tabIndex={0} aria-label={`${petLabel(slot.pet)}，${VARIANT_LABEL[slot.variant]}${slot.role === "father" ? "父本" : "母本"}，蛋组：${slot.pet.groups.length ? slot.pet.groups.join("、") : "无可用蛋组"}`}>
+                <div key={`${slot.role}-${petKey(slot.pet)}-${slot.variant}-${slot.x}-${slot.y}`} className={`nest-slot ${slot.role} variant-${slot.variant}`} style={{ "--left": `${pos.left}%`, "--top": `${pos.top}%` } as CSSProperties} tabIndex={0} aria-label={`${petLabel(slot.pet)}，${VARIANT_LABEL[slot.variant]}${slot.role === "father" ? "父本" : "母本"}，蛋组：${slot.pet.groups.length ? slot.pet.groups.join("、") : "无可用蛋组"}`}>
                   <div className="nest-shell">
                     <PetImage pet={slot.pet} />
                     {slot.variant !== "normal" && (
@@ -136,7 +138,7 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
         </article>
 
         <aside className="recommendation-panel">
-          <div className="panel-title"><span>本轮孵蛋目标</span><small>{plan.targetTier === "season-limited" ? "赛季限时优先" : plan.targetTier === "permanent" ? "补充常驻目标" : "后代种类由母本决定"}</small></div>
+          <div className="panel-title"><span>本轮孵蛋目标</span><small>{plan.targetTier === "favorite" ? "偏爱异色炫彩优先" : plan.targetTier === "season-limited" ? "赛季限时优先" : plan.targetTier === "permanent" ? "补充常驻目标" : "后代种类由母本决定"}</small></div>
           <div className="egg-list">
             {motherKeys.map((key, index) => {
               const mother = PET_MAP.get(key)!;
@@ -144,7 +146,7 @@ export function PlannerSection({ plan, planOptions, activePlanIndex, nestCount, 
               const fathers = Array.from(new Set(edges.map((edge) => petKey(edge.father.pet))));
               const motherVariant = edges[0].mother.variant;
               const motherCount = new Set(edges.map((edge) => edge.mother)).size;
-              return <div className="egg-item" key={key}><span className="egg-number">{String(index + 1).padStart(2, "0")}</span><PetImage pet={mother} /><div><strong>{petLabel(mother)}</strong><small>放置 {motherCount} 个{VARIANT_LABEL[motherVariant]}母本 · {commonGroup(PET_MAP.get(fathers[0])!, mother)} · 可与 {fathers.length} 只父本配对</small></div></div>;
+              return <div className="egg-item" key={key}><span className="egg-number">{String(index + 1).padStart(2, "0")}</span><PetImage pet={mother} /><div><strong>{petLabel(mother)}</strong>{plan.targetTier === "favorite" && <small>{edges[0].mother.targetKind === "combo" ? "偏爱 · 异色炫彩目标" : "补全 · 异色目标"}</small>}<small>放置 {motherCount} 个{VARIANT_LABEL[motherVariant]}母本 · {commonGroup(PET_MAP.get(fathers[0])!, mother)} · 可与 {fathers.length} 只父本配对</small></div></div>;
             })}
             {!plan.edges.length && <p className="panel-empty">完成图鉴登记后，推荐目标会显示在这里。</p>}
           </div>

@@ -43,6 +43,7 @@
   <div class="module-view" data-module-view="planner" role="tabpanel" aria-labelledby="module-tab-planner" hidden>
   <section class="planner-section" id="plan">
     <div class="section-heading solo"><div><p class="eyebrow">SMART NEST LAYOUT</p><h2>当前推荐摆窝方案</h2></div></div>
+    <p id="favoritePlanNote" class="favorite-help" role="status" hidden></p>
     <div class="planner-grid">
       <article class="nest-card">
         <div class="nest-toolbar">
@@ -67,12 +68,13 @@
   <div class="module-view" data-module-view="catalog" role="tabpanel" aria-labelledby="module-tab-catalog" hidden>
   <section class="collection-section" id="collection">
     <div class="section-heading collection-heading"><div><p class="eyebrow">MY RARE CATALOG</p><h2>异色 · 炫彩图鉴</h2><p class="collection-note">异色、炫彩与异色炫彩分别登记，互不覆盖；异色炫彩会同时计入异色与炫彩进度。同名地区形态使用独立卡片。后天形成的形态仍可登记并作为亲本，但不会作为可原样孵化的目标。排除战令精灵后，它们将不参与统计、推荐和后续路线。当前还有 <b id="limitedMissingCount">0</b> 只可孵的赛季限时异色尚未收集，摆窝推荐会优先选择这些目标。</p></div><div class="save-actions"><button id="exportBtn">导出进度</button><button id="importBtn">导入进度</button><button class="danger-action" id="clearBtn" aria-label="清空全部图鉴登记（需要确认）">清空登记</button><input id="importInput" type="file" accept="application/json,.json" hidden></div></div>
+    <p class="favorite-help">点亮爱心，即使已经收集，也会优先尝试它的异色炫彩。当前范围内还有未收集异色时，每种偏爱目标至多安排一个母本，兼顾补全；收集完成后可重复安排偏爱母本。仍遵守赛季与繁育规则，战令精灵不可生蛋，不参与繁育。不保证孵出异色炫彩。清空登记不会取消偏爱。</p>
     <div class="catalog-stats"><div><strong id="statOwned">0</strong><span>已拥有异色</span></div><div><strong id="statMale">0</strong><span>已拥有炫彩</span></div><div><strong id="statMissing">0</strong><span>已拥有异色炫彩</span></div><div><strong id="statOther">0</strong><span>需通过其他渠道</span></div><p id="saveStatus">已自动保存到本机</p></div>
     <div class="catalog-toolbar">
       <label class="search-box"><span>⌕</span><input id="searchInput" placeholder="搜索精灵、系别或蛋组" aria-label="搜索精灵、系别或蛋组"></label>
       <div class="filter-group" id="seasonFilter"><button class="active" data-value="all">全部赛季</button><button data-value="S1">S1</button><button data-value="S2">S2</button><button data-value="S3">S3</button><button data-value="S4">S4</button></div>
       <div class="filter-group gender-filter" id="genderFilter" role="group" aria-label="已登记性别筛选"><button class="active" data-value="all" aria-pressed="true">全部性别</button><button data-value="male" aria-pressed="false">雄性</button><button data-value="female" aria-pressed="false">雌性</button></div>
-      <div class="filter-group view" id="viewFilter"><button class="active" data-value="all">全部</button><button data-value="owned">已拥有</button><button data-value="missing">未拥有</button></div>
+      <div class="filter-group view" id="viewFilter" role="group" aria-label="图鉴状态筛选"><button type="button" class="active" data-value="all" aria-pressed="true">全部</button><button type="button" data-value="owned" aria-pressed="false">已拥有</button><button type="button" data-value="missing" aria-pressed="false">未拥有</button><button type="button" data-value="favorite" aria-pressed="false">喜爱</button></div>
       <button class="source-filter-toggle" id="battlePassFilter" type="button" aria-pressed="false"><span aria-hidden="true"></span><span><strong>排除战令精灵</strong><small id="battlePassFilterStatus">当前参与统计与推荐</small></span></button>
     </div>
     <div class="egg-group-filter-panel">

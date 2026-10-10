@@ -3,11 +3,11 @@
 import Image from "next/image";
 import { type ChangeEventHandler, useMemo, useRef, useState } from "react";
 import { EGG_GROUPS, PETS, PET_SERIES, type Pet } from "../data";
-import { FLAG, OWN, isBattlePassPet, isBreedable, ownsKind, petKey, petLabel, seasonMatches, type Focus, type OwnedMap } from "../planner-core";
+import { FLAG, OWN, isBattlePassPet, isBreedable, isEggTarget, ownsKind, petKey, petLabel, seasonMatches, type Focus, type OwnedMap } from "../planner-core";
 import { SERIES_ICONS } from "../series-icons";
 import { PetImage } from "./pet-image";
 
-type ViewFilter = "all" | "owned" | "missing";
+type ViewFilter = "all" | "owned" | "missing" | "favorite";
 type GenderFilter = "all" | "male" | "female";
 
 function SeriesIcon({ series, className }: { series: string; className: string }) {
@@ -18,6 +18,8 @@ function SeriesIcon({ series, className }: { series: string; className: string }
 type CollectionSectionProps = {
   pets: Pet[];
   owned: OwnedMap;
+  favorites: string[];
+  onToggleFavorite: (key: string) => void;
   shinyCount: number;
   colorfulCount: number;
   comboCount: number;
@@ -33,7 +35,7 @@ type CollectionSectionProps = {
   onClear: () => void;
 };
 
-function PetCard({ pet, ownedMask, onToggleOwned }: { pet: Pet; ownedMask: number; onToggleOwned: (key: string, bit: number) => void }) {
+function PetCard({ pet, ownedMask, favorite, onToggleFavorite, onToggleOwned }: { pet: Pet; ownedMask: number; favorite: boolean; onToggleFavorite: (key: string) => void; onToggleOwned: (key: string, bit: number) => void }) {
   const key = petKey(pet);
   const disabled = !isBreedable(pet);
   const offspring = pet.offspringKey && pet.offspringKey !== key ? PETS.find((candidate) => petKey(candidate) === pet.offspringKey) : undefined;
@@ -55,6 +57,9 @@ function PetCard({ pet, ownedMask, onToggleOwned }: { pet: Pet; ownedMask: numbe
         {offspring && <span className="inheritance-tag">后代不继承此形态</span>}
       </div>
       <div className="pet-info">
+        <button type="button" className={`favorite-button ${favorite ? "active" : ""}`} aria-pressed={favorite} aria-label={`${favorite ? "取消偏爱" : "偏爱"}${petLabel(pet)}`} title={`${favorite ? "已偏爱：优先尝试异色炫彩，可再次点击取消" : "设为偏爱：即使已收集，也优先尝试异色炫彩"}${!isEggTarget(pet) ? (isBattlePassPet(pet) ? "；战令精灵不可生蛋，不参与繁育" : "；此精灵不能原样孵出，暂不参与偏爱孵化") : ""}`} onClick={() => onToggleFavorite(key)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /></svg>
+        </button>
         <h3>
           <span className="pet-name">{pet.name}</span>
           <span className="pet-info-trigger" tabIndex={0} aria-label={`${petLabel(pet)}，系别：${pet.series.join("、")}，异色获取信息：${pet.availabilityReason}，蛋组：${pet.groups.length ? pet.groups.join("、") : "无可用蛋组"}${inheritanceNote}${pet.evolutionChain.length > 1 ? `，进化链：${pet.evolutionChain.join(" → ")}` : ""}`}>
@@ -87,7 +92,7 @@ function PetCard({ pet, ownedMask, onToggleOwned }: { pet: Pet; ownedMask: numbe
   );
 }
 
-export function CollectionSection({ pets, owned, shinyCount, colorfulCount, comboCount, limitedMissingCount, otherChannelMissingCount, saveStatus, seasonKeys, excludeBattlePass, onExcludeBattlePassChange, onToggleOwned, onExport, onImport, onClear }: CollectionSectionProps) {
+export function CollectionSection({ pets, owned, favorites, onToggleFavorite, shinyCount, colorfulCount, comboCount, limitedMissingCount, otherChannelMissingCount, saveStatus, seasonKeys, excludeBattlePass, onExcludeBattlePassChange, onToggleOwned, onExport, onImport, onClear }: CollectionSectionProps) {
   const [search, setSearch] = useState("");
   const [seasonFilter, setSeasonFilter] = useState<Focus>("all");
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
@@ -104,11 +109,12 @@ export function CollectionSection({ pets, owned, shinyCount, colorfulCount, comb
     if (seriesFilter !== "all" && !pet.series.includes(seriesFilter)) return false;
     if (viewFilter === "owned" && !owned[petKey(pet)]) return false;
     if (viewFilter === "missing" && ownsKind(owned[petKey(pet)], "shiny")) return false;
+    if (viewFilter === "favorite" && !favorites.includes(petKey(pet))) return false;
     const ownedMask = owned[petKey(pet)] || 0;
     if (genderFilter === "male" && !(ownedMask & (OWN.SHINY_M | OWN.COLOR_M | OWN.COMBO_M))) return false;
     if (genderFilter === "female" && !(ownedMask & (OWN.SHINY_F | OWN.COLOR_F | OWN.COMBO_F))) return false;
     return true;
-  }), [pets, search, seasonFilter, eggGroupFilter, seriesFilter, viewFilter, genderFilter, owned]);
+  }), [pets, search, seasonFilter, eggGroupFilter, seriesFilter, viewFilter, genderFilter, owned, favorites]);
 
   return (
     <section className="collection-section" id="collection">
@@ -116,12 +122,13 @@ export function CollectionSection({ pets, owned, shinyCount, colorfulCount, comb
         <div><p className="eyebrow">MY RARE CATALOG</p><h2>异色 · 炫彩图鉴</h2><p className="collection-note">异色、炫彩与异色炫彩分别登记，互不覆盖；异色炫彩会同时计入异色与炫彩进度。同名地区形态使用独立卡片。后天形成的形态仍可登记并作为亲本，但不会作为可原样孵化的目标。排除战令精灵后，它们将不参与统计、推荐和后续路线。当前还有 {limitedMissingCount} 只可孵的赛季限时异色尚未收集，摆窝推荐会优先选择这些目标。</p></div>
         <div className="save-actions"><button type="button" onClick={onExport}>导出进度</button><button type="button" onClick={() => importRef.current?.click()}>导入进度</button><button className="danger-action" type="button" aria-label="清空全部图鉴登记（需要确认）" onClick={onClear}>清空登记</button><input ref={importRef} type="file" accept="application/json,.json" onChange={onImport} hidden /></div>
       </div>
+      <p className="favorite-help">点亮爱心，即使已经收集，也会优先尝试它的异色炫彩。当前范围内还有未收集异色时，每种偏爱目标至多安排一个母本，兼顾补全；收集完成后可重复安排偏爱母本。仍遵守赛季与繁育规则，战令精灵不可生蛋，不参与繁育。不保证孵出异色炫彩。清空登记不会取消偏爱。</p>
       <div className="catalog-stats"><div><strong>{shinyCount}</strong><span>已拥有异色</span></div><div><strong>{colorfulCount}</strong><span>已拥有炫彩</span></div><div><strong>{comboCount}</strong><span>已拥有异色炫彩</span></div><div><strong>{otherChannelMissingCount}</strong><span>需通过其他渠道</span></div><p>{saveStatus}</p></div>
       <div className="catalog-toolbar">
         <label className="search-box"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索精灵、系别或蛋组" aria-label="搜索精灵、系别或蛋组" /></label>
         <div className="filter-group" role="group" aria-label="赛季筛选">{(["all", ...seasonKeys] as Focus[]).map((value) => <button type="button" className={seasonFilter === value ? "active" : ""} key={value} aria-pressed={seasonFilter === value} onClick={() => setSeasonFilter(value)}>{value === "all" ? "全部赛季" : value}</button>)}</div>
         <div className="filter-group gender-filter" role="group" aria-label="已登记性别筛选">{(["all", "male", "female"] as GenderFilter[]).map((value) => <button type="button" className={genderFilter === value ? "active" : ""} key={value} aria-pressed={genderFilter === value} onClick={() => setGenderFilter(value)}>{value === "all" ? "全部性别" : value === "male" ? "雄性" : "雌性"}</button>)}</div>
-        <div className="filter-group view" role="group" aria-label="拥有状态筛选">{(["all", "owned", "missing"] as ViewFilter[]).map((value) => <button type="button" className={viewFilter === value ? "active" : ""} key={value} aria-pressed={viewFilter === value} onClick={() => setViewFilter(value)}>{value === "all" ? "全部" : value === "owned" ? "已拥有" : "未拥有"}</button>)}</div>
+        <div className="filter-group view" role="group" aria-label="图鉴状态筛选">{(["all", "owned", "missing", "favorite"] as ViewFilter[]).map((value) => <button type="button" className={viewFilter === value ? "active" : ""} key={value} aria-pressed={viewFilter === value} onClick={() => setViewFilter(value)}>{value === "all" ? "全部" : value === "owned" ? "已拥有" : value === "missing" ? "未拥有" : "喜爱"}</button>)}</div>
         <button className={`source-filter-toggle ${excludeBattlePass ? "active" : ""}`} type="button" aria-pressed={excludeBattlePass} onClick={() => onExcludeBattlePassChange(!excludeBattlePass)}><span aria-hidden="true" /><span><strong>排除战令精灵</strong><small>{excludeBattlePass ? "当前不参与统计与推荐" : "当前参与统计与推荐"}</small></span></button>
       </div>
       <div className="egg-group-filter-panel">
@@ -143,8 +150,8 @@ export function CollectionSection({ pets, owned, shinyCount, colorfulCount, comb
           })}
         </div>
       </div>
-      <div className="pet-grid">{visiblePets.map((pet) => <PetCard key={petKey(pet)} pet={pet} ownedMask={owned[petKey(pet)] || 0} onToggleOwned={onToggleOwned} />)}</div>
-      {!visiblePets.length && <div className="no-results">没有符合当前筛选的精灵。</div>}
+      <div className="pet-grid">{visiblePets.map((pet) => <PetCard key={petKey(pet)} pet={pet} ownedMask={owned[petKey(pet)] || 0} favorite={favorites.includes(petKey(pet))} onToggleFavorite={onToggleFavorite} onToggleOwned={onToggleOwned} />)}</div>
+      {!visiblePets.length && <div className="no-results" role="status">{viewFilter === "favorite" ? "当前筛选下没有喜爱的精灵。可切换到“全部”点亮卡片爱心，或调整其他筛选条件。" : "没有符合当前筛选的精灵。"}</div>}
     </section>
   );
 }

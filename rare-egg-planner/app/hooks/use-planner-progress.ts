@@ -2,16 +2,17 @@
 
 import { type ChangeEvent, useEffect, useState } from "react";
 import { PETS } from "../data";
-import { FLAG, OWN, migrateOwnedMap, petKey, type Focus, type OwnedMap } from "../planner-core";
+import { FLAG, OWN, migrateOwnedMap, normalizeFavorites, petKey, type Focus, type OwnedMap } from "../planner-core";
 
 const STORAGE_KEY = "roco-rare-nest-planner-v2";
 const LEGACY_STORAGE_KEY = "roco-shiny-nest-planner-v1";
-const PROGRESS_VERSION = 5;
+const PROGRESS_VERSION = 6;
 const PET_MAP = new Map(PETS.map((pet) => [petKey(pet), pet]));
 
 type StoredProgress = {
   version?: number;
   owned?: OwnedMap;
+  favorites?: string[];
   nestCount?: number;
   focus?: Focus;
   excludeBattlePass?: boolean;
@@ -38,6 +39,7 @@ function downloadProgress(payload: string) {
 
 export function usePlannerProgress() {
   const [owned, setOwned] = useState<OwnedMap>({});
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [nestCount, setNestCount] = useState(10);
   const [focus, setFocus] = useState<Focus>("all");
   const [excludeBattlePass, setExcludeBattlePass] = useState(false);
@@ -52,6 +54,7 @@ export function usePlannerProgress() {
       if (saved) {
         const parsed = JSON.parse(saved) as StoredProgress;
         if (parsed.owned) setOwned(migrateOwnedMap(PETS, parsed.owned));
+        setFavorites(normalizeFavorites(PETS, parsed.favorites));
         if (parsed.nestCount) setNestCount(Math.min(10, Math.max(2, parsed.nestCount)));
         if (parsed.focus) setFocus(parsed.focus);
         if (typeof parsed.excludeBattlePass === "boolean") setExcludeBattlePass(parsed.excludeBattlePass);
@@ -68,13 +71,13 @@ export function usePlannerProgress() {
     if (!hydrated) return;
     /* eslint-disable react-hooks/set-state-in-effect -- save status reflects whether the external browser storage write succeeded. */
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, excludeBattlePass, savedAt: new Date().toISOString() }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: PROGRESS_VERSION, owned, favorites, nestCount, focus, excludeBattlePass, savedAt: new Date().toISOString() }));
       setSaveStatus("已自动保存到本机");
     } catch {
       setSaveStatus("本机存储不可用，请导出进度作为备份");
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [owned, nestCount, focus, excludeBattlePass, hydrated]);
+  }, [owned, favorites, nestCount, focus, excludeBattlePass, hydrated]);
 
   useEffect(() => {
     if (!toast) return;
@@ -90,7 +93,7 @@ export function usePlannerProgress() {
   }
 
   async function exportProgress() {
-    const buildPayload = () => JSON.stringify({ version: PROGRESS_VERSION, owned, nestCount, focus, excludeBattlePass, exportedAt: new Date().toISOString() }, null, 2);
+    const buildPayload = () => JSON.stringify({ version: PROGRESS_VERSION, owned, favorites, nestCount, focus, excludeBattlePass, exportedAt: new Date().toISOString() }, null, 2);
     const savePicker = (window as SaveFilePickerWindow).showSaveFilePicker;
 
     if (savePicker) {
@@ -126,6 +129,7 @@ export function usePlannerProgress() {
         const payload = JSON.parse(String(reader.result)) as StoredProgress;
         if (!payload.owned) throw new Error("invalid");
         setOwned(migrateOwnedMap(PETS, payload.owned));
+        setFavorites(normalizeFavorites(PETS, payload.favorites));
         if (payload.nestCount) setNestCount(Math.min(10, Math.max(2, payload.nestCount)));
         if (payload.focus) setFocus(payload.focus);
         if (typeof payload.excludeBattlePass === "boolean") setExcludeBattlePass(payload.excludeBattlePass);
@@ -148,6 +152,11 @@ export function usePlannerProgress() {
 
   return {
     owned,
+    favorites,
+    toggleFavorite: (key: string) => {
+      if (!PET_MAP.has(key)) return;
+      setFavorites((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+    },
     nestCount,
     setNestCount,
     focus,

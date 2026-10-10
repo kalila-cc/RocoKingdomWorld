@@ -109,7 +109,10 @@ test("offline package is self-contained and data-complete", async () => {
   assert.doesNotMatch(html, /(?:src|href)=["']\/\//);
   assert.match(app, /roco-rare-nest-planner-v2/);
   assert.match(app, /roco-shiny-nest-planner-v1/);
-  assert.match(app, /version:5/);
+  assert.match(app, /version:6/);
+  assert.match(app, /favorites:state\.favorites/);
+  assert.match(app, /data-favorite/);
+  assert.match(progressSource, /normalizeFavorites\(PETS, payload\.favorites\)/);
   assert.doesNotMatch(app, /version:4/);
   assert.match(app, /roco-rare-egg-progress\.json/);
   assert.match(app, /window\.ROCO_PLANNER/);
@@ -172,7 +175,8 @@ test("offline package is self-contained and data-complete", async () => {
   assert.match(html, /排除战令精灵/);
   assert.match(app, /NON_BATTLE_PASS_PETS/);
   assert.match(app, /excludeBattlePass/);
-  assert.match(app, /PLANNERS\.noBattlePass/);
+  assert.match(app, /state\.excludeBattlePass \? NON_BATTLE_PASS_PETS : PETS/);
+  assert.match(app, /createPlanner\(activePets\(\),state\.favorites\)/);
   assert.match(app, /当前不参与统计与推荐/);
   assert.match(app, /const EGG_GROUPS = Array\.from/);
   assert.match(app, /state\.group==="none"/);

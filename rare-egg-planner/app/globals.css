@@ -231,6 +231,16 @@ main { min-height: 100dvh; overflow: visible; }
 
 /* catalog.css */
 .collection-section { background: var(--paper); }
+.favorite-help { color: var(--muted); font-size: 13px; line-height: 1.7; margin: 0 0 20px; }
+.favorite-button { position: absolute; right: 6px; top: 7px; width: 36px; height: 36px; display: grid; place-items: center; padding: 7px; border: 1px solid transparent; border-radius: 10px; color: #8d7d80; background: transparent; cursor: pointer; }
+.favorite-button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.favorite-button.active { color: #c44761; background: #fff0f3; }
+.favorite-button.active svg { fill: currentColor; }
+.favorite-button:hover { color: #b23852; border-color: #e6b8c1; }
+.favorite-button:focus-visible { outline: 3px solid #c44761; outline-offset: 2px; }
+.favorite-button:active { transform: scale(.96); }
+.pet-info:has(.favorite-button) h3 { padding-right: 30px; min-height: 26px; white-space: normal; flex-wrap: wrap; }
+.pet-info:has(.favorite-button) .pet-name { overflow: visible; overflow-wrap: anywhere; }
 .collection-heading { align-items: center; }
 .collection-heading .eyebrow { color: var(--coral); }
 .collection-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }

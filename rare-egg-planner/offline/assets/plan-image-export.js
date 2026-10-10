@@ -173,7 +173,7 @@ async function renderPlanImage(options) {
     context.fillStyle = "#716a7d";
     context.font = `600 18px ${FONT_STACK}`;
     const focusLabel = focus === "all" ? "全部赛季" : focus;
-    context.fillText(`${focusLabel} · ${plan.slots.length} 个窝位 · ${planner_core_1.TARGET_LABEL[plan.kind]}目标`, 74, 140);
+    context.fillText(`${focusLabel} · ${plan.slots.length} 个窝位 · ${plan.targetTier === "favorite" ? "偏爱异色炫彩 / 异色补全" : `${planner_core_1.TARGET_LABEL[plan.kind]}目标`}`, 74, 140);
     fillRoundedRect(context, 1320, 44, 208, 92, 20, "#fff7df");
     strokeRoundedRect(context, 1320, 44, 208, 92, 20, "#e8ce8f", 2);
     context.fillStyle = "#786e5a";
@@ -184,7 +184,7 @@ async function renderPlanImage(options) {
     context.fillText(plan.recommendation ? `${plan.recommendation}%` : "--", 1430, 83);
     context.fillStyle = "#8b7a5b";
     context.font = `700 14px ${FONT_STACK}`;
-    context.fillText(plan.targetTier === "season-limited" ? "限时异色优先" : plan.targetTier === "permanent" ? "常驻异色补全" : `${planner_core_1.TARGET_LABEL[plan.kind]}方案`, 1344, 113);
+    context.fillText(plan.targetTier === "favorite" ? "偏爱异色炫彩" : plan.targetTier === "season-limited" ? "限时异色优先" : plan.targetTier === "permanent" ? "常驻异色补全" : `${planner_core_1.TARGET_LABEL[plan.kind]}方案`, 1344, 113);
     const mapX = 48;
     const mapY = 172;
     const mapWidth = 1504;

@@ -14,10 +14,10 @@ const SEASON_KEYS = Array.from(new Set(PETS.map((pet) => pet.season.match(/^S\d+
 
 export default function Home() {
   const { activeModule, openModule } = useModuleNavigation();
-  const { owned, nestCount, setNestCount, focus, setFocus, excludeBattlePass, setExcludeBattlePass, saveStatus, toast, toggleOwned, exportProgress, importProgress, clearProgress } = usePlannerProgress();
+  const { owned, favorites, toggleFavorite, nestCount, setNestCount, focus, setFocus, excludeBattlePass, setExcludeBattlePass, saveStatus, toast, toggleOwned, exportProgress, importProgress, clearProgress } = usePlannerProgress();
   const [selectedPlan, setSelectedPlan] = useState(0);
   const activePets = useMemo(() => excludeBattlePass ? PETS.filter((pet) => !isBattlePassPet(pet)) : PETS, [excludeBattlePass]);
-  const planner = useMemo(() => createPlanner(activePets), [activePets]);
+  const planner = useMemo(() => createPlanner(activePets, favorites), [activePets, favorites]);
   const planOptions = useMemo(() => planner.makeAutoPlanOptions(owned, nestCount, focus), [planner, owned, nestCount, focus]);
   const activePlanIndex = Math.min(selectedPlan, Math.max(0, planOptions.length - 1));
   const plan = planOptions[activePlanIndex];
@@ -44,6 +44,8 @@ export default function Home() {
         <CollectionSection
           pets={activePets}
           owned={owned}
+          favorites={favorites}
+          onToggleFavorite={(key) => { toggleFavorite(key); setSelectedPlan(0); }}
           shinyCount={stats.shiny}
           colorfulCount={stats.colorful}
           comboCount={stats.combo}
@@ -62,6 +64,7 @@ export default function Home() {
       {activeModule === "planner" && <div className="module-view" role="tabpanel" aria-labelledby="module-tab-planner">
         <PlannerSection
           plan={plan}
+          hasFavorites={favorites.length > 0}
           planOptions={planOptions}
           activePlanIndex={activePlanIndex}
           nestCount={nestCount}

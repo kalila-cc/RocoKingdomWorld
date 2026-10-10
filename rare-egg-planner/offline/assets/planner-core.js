@@ -8,6 +8,7 @@ exports.petKey = petKey;
 exports.petLabel = petLabel;
 exports.isBattlePassPet = isBattlePassPet;
 exports.migrateOwnedMap = migrateOwnedMap;
+exports.normalizeFavorites = normalizeFavorites;
 exports.ownsKind = ownsKind;
 exports.availableMotherVariants = availableMotherVariants;
 exports.isBreedable = isBreedable;
@@ -28,6 +29,7 @@ function prefersCandidate(candidate, current) {
     const candidateRank = [
         Number(candidate.fillsRequestedNests),
         Number(candidate.allNestsConnected),
+        candidate.favoriteTargets,
         parentBalance(candidate.edges),
         candidate.priorityTargets,
         candidate.distinctTargets,
@@ -39,6 +41,7 @@ function prefersCandidate(candidate, current) {
     const currentRank = [
         Number(current.fillsRequestedNests),
         Number(current.allNestsConnected),
+        current.favoriteTargets,
         parentBalance(current.edges),
         current.priorityTargets,
         current.distinctTargets,
@@ -90,7 +93,7 @@ function petLabel(pet) {
     return pet.form ? `${pet.name}（${pet.form}）` : pet.name;
 }
 function isBattlePassPet(pet) {
-    return pet.availabilityReason.includes("战令");
+    return pet.availability === "battle-pass" || pet.availabilityReason.includes("战令");
 }
 function migrateOwnedMap(pets, source) {
     const migrated = { ...(source || {}) };
@@ -102,6 +105,13 @@ function migrateOwnedMap(pets, source) {
     });
     splitNames.forEach((name) => { delete migrated[name]; });
     return migrated;
+}
+// Favorites are independent of owned traits; old progress files have none.
+function normalizeFavorites(pets, source) {
+    if (!Array.isArray(source))
+        return [];
+    const keys = new Set(pets.map(petKey));
+    return [...new Set(source.filter((key) => typeof key === "string" && keys.has(key)))].sort();
 }
 function ownsKind(mask, kind) {
     const value = mask || 0;
@@ -123,13 +133,13 @@ function availableMotherVariants(mask) {
     return variants;
 }
 function isBreedable(pet) {
-    return Boolean(pet.flags & exports.FLAG.BREEDABLE) && !Boolean(pet.flags & exports.FLAG.RULE_NON_BREEDABLE);
+    return !isBattlePassPet(pet) && Boolean(pet.flags & exports.FLAG.BREEDABLE) && !Boolean(pet.flags & exports.FLAG.RULE_NON_BREEDABLE);
 }
 function offspringKey(pet) {
     return pet.offspringKey || petKey(pet);
 }
 function isEggTarget(pet) {
-    return isBreedable(pet) && offspringKey(pet) === petKey(pet);
+    return isBreedable(pet) && !(pet.flags & exports.FLAG.MALE_ONLY) && offspringKey(pet) === petKey(pet);
 }
 function seasonMatches(pet, focus) {
     return focus === "all" || pet.season.startsWith(focus);
@@ -263,9 +273,17 @@ function forEachCombination(items, count, visit) {
     };
     choose(0);
 }
-function createPlanner(pets) {
+function createPlanner(pets, favoriteKeys = []) {
+    const favorites = new Set(normalizeFavorites(pets, favoriteKeys));
     const petMap = new Map(pets.map((pet) => [petKey(pet), pet]));
     const exactPlanCache = new Map();
+    function targetPolicy(owned, focus, kind, tier) {
+        return {
+            kindFor: (pet) => tier === "favorite" && !favorites.has(petKey(pet)) ? "shiny" : kind,
+            favoriteMode: tier === "favorite",
+            capFavorites: pets.some((pet) => isEggTarget(pet) && seasonMatches(pet, focus) && !ownsKind(owned[petKey(pet)], "shiny")),
+        };
+    }
     function sameEggGroup(father, mother) {
         return father.maleTargets.includes(petKey(mother)) || Boolean(commonGroup(father, mother) !== "同蛋组" && isBreedable(father) && isBreedable(mother));
     }
@@ -280,7 +298,7 @@ function createPlanner(pets) {
     function maleParents(owned, kind) {
         const parents = [];
         pets.forEach((pet) => {
-            if (!isBreedable(pet))
+            if (!isBreedable(pet) || (pet.flags & exports.FLAG.FEMALE_ONLY))
                 return;
             const mask = owned[petKey(pet)] || 0;
             if ((kind === "shiny" || kind === "combo") && (mask & exports.OWN.SHINY_M))
@@ -400,7 +418,7 @@ function createPlanner(pets) {
         }
         return edges;
     }
-    function chooseMales(males, targets, owned, kind, count, salt) {
+    function chooseMales(males, targets, owned, kind, count, salt, policy) {
         const chosen = [];
         const remaining = [...males];
         const covered = new Set();
@@ -408,9 +426,9 @@ function createPlanner(pets) {
             remaining.sort((a, b) => {
                 const score = (parent) => parent.pet.maleTargets.reduce((sum, name) => {
                     const target = petMap.get(name);
-                    if (!target || !targets.includes(target) || covered.has(name) || !bestMotherVariant(owned, target, parent, kind))
+                    if (!target || !targets.includes(target) || covered.has(name) || !bestMotherVariant(owned, target, parent, policy.kindFor(target)))
                         return sum;
-                    return sum + 20 + target.maleTargets.length * 0.25;
+                    return sum + (policy.favoriteMode && favorites.has(name) ? 10000 : 20) + target.maleTargets.length * 0.25;
                 }, 0) + (parent.variant === "combo" ? 2 : 0) + ((hashText(`${petKey(parent.pet)}-${parent.variant}-${salt}`) % 100) / 10000);
                 return score(b) - score(a);
             });
@@ -422,18 +440,19 @@ function createPlanner(pets) {
         }
         return chosen;
     }
-    function rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier) {
+    function rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier, policy) {
         const ranked = targets
             .map((pet) => {
+            const targetKind = policy.kindFor(pet);
             const variants = availableMotherVariants(owned[petKey(pet)]);
             const scoredVariants = variants.map((variant) => {
                 let profile = 0;
                 let traitValue = 0;
                 chosenMales.forEach((father, fatherIndex) => {
-                    if (!sameEggGroup(father.pet, pet) || !canProduce(kind, father.variant, variant))
+                    if (!sameEggGroup(father.pet, pet) || !canProduce(targetKind, father.variant, variant))
                         return;
                     profile |= 1 << fatherIndex;
-                    traitValue += Math.max(0, motherVariantValue(kind, father.variant, variant));
+                    traitValue += Math.max(0, motherVariantValue(targetKind, father.variant, variant));
                 });
                 return { variant, profile, compatible: countBits(profile), traitValue };
             }).sort((a, b) => b.compatible - a.compatible || b.traitValue - a.traitValue);
@@ -444,6 +463,7 @@ function createPlanner(pets) {
             }).length;
             return {
                 pet,
+                targetKind,
                 variant: bestVariant.variant,
                 compatible: bestVariant.compatible,
                 traitValue: bestVariant.traitValue,
@@ -453,21 +473,24 @@ function createPlanner(pets) {
             };
         })
             .filter((item) => item.compatible > 0)
-            .sort((a, b) => b.compatible - a.compatible
+            .sort((a, b) => (policy.favoriteMode ? Number(favorites.has(petKey(b.pet))) - Number(favorites.has(petKey(a.pet)))
+            || Number(b.pet.availability === "season-limited") - Number(a.pet.availability === "season-limited") : 0)
+            || b.compatible - a.compatible
             || b.traitValue - a.traitValue
             || b.futureReach - a.futureReach
             || b.tieBreaker - a.tieBreaker);
         return ranked;
     }
-    function expandMotherCandidates(primaryCandidates, secondaryCandidates, count, salt) {
+    function expandMotherCandidates(primaryCandidates, secondaryCandidates, count, salt, capFavorites) {
         if (!primaryCandidates.length || count <= 0)
             return [];
         const selected = [...primaryCandidates, ...secondaryCandidates].slice(0, count);
-        const duplicatePool = [...primaryCandidates].sort((a, b) => b.compatible - a.compatible
+        const repeatablePrimary = primaryCandidates.filter((item) => !capFavorites || !favorites.has(petKey(item.pet)));
+        const duplicatePool = (repeatablePrimary.length ? repeatablePrimary : secondaryCandidates.filter((item) => !capFavorites || !favorites.has(petKey(item.pet)))).sort((a, b) => b.compatible - a.compatible
             || b.traitValue - a.traitValue
             || ((b.tieBreaker + salt) % 97) - ((a.tieBreaker + salt) % 97));
         let duplicateIndex = salt % duplicatePool.length;
-        while (selected.length < count) {
+        while (duplicatePool.length && selected.length < count) {
             selected.push(duplicatePool[duplicateIndex % duplicatePool.length]);
             duplicateIndex += 1;
         }
@@ -486,6 +509,7 @@ function createPlanner(pets) {
             allNestsConnected: fillsRequestedNests && connectedSlots === slots.length,
             pairedMothers: connectedMotherSlots.size,
             priorityTargets,
+            favoriteTargets: new Set([...connectedMotherSlots].filter((slot) => slot.targetKind === "combo" && favorites.has(petKey(slot.pet))).map((slot) => petKey(slot.pet))).size,
             distinctTargets: connectedTargets.size,
             connectedSlots,
             maleCount,
@@ -625,18 +649,18 @@ function createPlanner(pets) {
         }
         return occupied === 0 && connectedFathers === 0 && assignment.every((profile) => profile > 0) ? assignment : null;
     }
-    function makeExactCandidate(males, targets, secondaryTargets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier) {
+    function makeExactCandidate(males, targets, secondaryTargets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier, policy) {
         let best = null;
         let bestTieScore = -1;
         const maxMales = Math.min(males.length, nestCount - 1, exports.EXACT_PARENT_LIMIT);
         for (let maleCount = 1; maleCount <= maxMales; maleCount += 1) {
             forEachCombination(males, maleCount, (chosenMales) => {
-                const rankedTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier);
+                const rankedTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier, policy);
                 if (!rankedTargets.length)
                     return;
-                const rankedSecondaryTargets = rankMotherCandidates(chosenMales, secondaryTargets, owned, kind, salt, isMissingObjective, () => true);
+                const rankedSecondaryTargets = rankMotherCandidates(chosenMales, secondaryTargets, owned, kind, salt, isMissingObjective, () => true, policy);
                 const motherCount = nestCount - maleCount;
-                const expandedTargets = expandMotherCandidates(rankedTargets, rankedSecondaryTargets, motherCount, salt);
+                const expandedTargets = expandMotherCandidates(rankedTargets, rankedSecondaryTargets, motherCount, salt, policy.capFavorites);
                 if (expandedTargets.length !== motherCount)
                     return;
                 const candidatesByProfile = new Map();
@@ -684,7 +708,7 @@ function createPlanner(pets) {
                     ...assignment.map((mother, motherIndex) => ({
                         pet: mother.pet,
                         variant: mother.variant,
-                        targetKind: kind,
+                        targetKind: mother.targetKind,
                         role: "mother",
                         x: positions[pattern.motherPositionIndexes[motherIndex]].x,
                         y: positions[pattern.motherPositionIndexes[motherIndex]].y,
@@ -703,30 +727,31 @@ function createPlanner(pets) {
         }
         return best;
     }
-    function effectiveMaleParents(owned, kind, targets) {
-        return maleParents(owned, kind).filter((father) => targets.some((target) => sameEggGroup(father.pet, target) && Boolean(bestMotherVariant(owned, target, father, kind))));
+    function effectiveMaleParents(owned, kind, targets, policy) {
+        return maleParents(owned, kind).filter((father) => targets.some((target) => sameEggGroup(father.pet, target) && Boolean(bestMotherVariant(owned, target, father, policy.kindFor(target)))));
     }
     function canUseExactSearch(owned, focus, kind, objective, targetTier) {
-        const targets = pets.filter((pet) => !ownsKind(owned[petKey(pet)], objective)
+        const targets = pets.filter((pet) => (targetTier === "favorite" ? favorites.has(petKey(pet)) || !ownsKind(owned[petKey(pet)], "shiny") : !ownsKind(owned[petKey(pet)], objective))
             && isEggTarget(pet)
             && tierMatches(pet, objective, targetTier)
             && seasonMatches(pet, focus));
-        const parentCount = effectiveMaleParents(owned, kind, targets).length;
+        const parentCount = effectiveMaleParents(owned, kind, targets, targetPolicy(owned, focus, kind, targetTier)).length;
         return parentCount > 0 && parentCount <= exports.EXACT_PARENT_LIMIT;
     }
     function makePlan(owned, nestCount, focus, kind, salt, objective = kind, targetTier = "all", exactSearch = false) {
-        const isMissingObjective = (pet) => !ownsKind(owned[petKey(pet)], objective);
+        const policy = targetPolicy(owned, focus, kind, targetTier);
+        const isMissingObjective = (pet) => targetTier === "favorite" ? favorites.has(petKey(pet)) || !ownsKind(owned[petKey(pet)], "shiny") : !ownsKind(owned[petKey(pet)], objective);
         const isCurrentTier = (pet) => tierMatches(pet, objective, targetTier);
         const targets = pets.filter((pet) => isMissingObjective(pet) && isEggTarget(pet) && isCurrentTier(pet) && seasonMatches(pet, focus));
         const secondaryTargets = objective === "shiny" && targetTier === "season-limited"
             ? pets.filter((pet) => isMissingObjective(pet) && isEggTarget(pet) && pet.availability === "permanent" && seasonMatches(pet, focus))
             : [];
         const allMissing = pets.filter((pet) => isMissingObjective(pet) && isEggTarget(pet) && isCurrentTier(pet));
-        const males = effectiveMaleParents(owned, kind, targets);
+        const males = effectiveMaleParents(owned, kind, targets, policy);
         const direct = new Set();
         males.forEach((father) => father.pet.maleTargets.forEach((name) => {
             const target = petMap.get(name);
-            if (target && isMissingObjective(target) && isEggTarget(target) && isCurrentTier(target) && bestMotherVariant(owned, target, father, kind))
+            if (target && isMissingObjective(target) && isEggTarget(target) && isCurrentTier(target) && bestMotherVariant(owned, target, father, policy.kindFor(target)))
                 direct.add(name);
         }));
         if (!males.length || !targets.length) {
@@ -748,19 +773,19 @@ function createPlanner(pets) {
                 return cached;
         }
         let best = exactCacheKey
-            ? makeExactCandidate(males, targets, secondaryTargets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier)
+            ? makeExactCandidate(males, targets, secondaryTargets, owned, nestCount, kind, salt, isMissingObjective, isCurrentTier, policy)
             : null;
         if (!best) {
             const maxMales = Math.min(males.length, nestCount - 1, exports.EXACT_PARENT_LIMIT);
             for (let maleCount = 1; maleCount <= maxMales; maleCount += 1) {
-                const chosenMales = chooseMales(males, targets, owned, kind, maleCount, salt);
+                const chosenMales = chooseMales(males, targets, owned, kind, maleCount, salt, policy);
                 const motherCount = nestCount - chosenMales.length;
-                const rankedTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier);
-                const rankedSecondaryTargets = rankMotherCandidates(chosenMales, secondaryTargets, owned, kind, salt, isMissingObjective, () => true);
-                const chosenTargets = expandMotherCandidates(rankedTargets, rankedSecondaryTargets, motherCount, salt);
+                const rankedTargets = rankMotherCandidates(chosenMales, targets, owned, kind, salt, isMissingObjective, isCurrentTier, policy);
+                const rankedSecondaryTargets = rankMotherCandidates(chosenMales, secondaryTargets, owned, kind, salt, isMissingObjective, () => true, policy);
+                const chosenTargets = expandMotherCandidates(rankedTargets, rankedSecondaryTargets, motherCount, salt, policy.capFavorites);
                 const roster = [
                     ...chosenMales.map((parent) => ({ pet: parent.pet, variant: parent.variant, targetKind: kind, role: "father" })),
-                    ...chosenTargets.map((item) => ({ pet: item.pet, variant: item.variant, targetKind: kind, role: "mother" })),
+                    ...chosenTargets.map((item) => ({ pet: item.pet, variant: item.variant, targetKind: item.targetKind, role: "mother" })),
                 ];
                 const slots = optimizeLayout(roster, salt);
                 const edges = buildEdges(slots);
@@ -797,6 +822,13 @@ function createPlanner(pets) {
                 : selected.plan;
             return { ...plan, kind: selected.kind, recommendation: recommendationFor(plan, selected.kind) };
         };
+        // Favorites always aim for combo, while other mothers can fill missing
+        // shiny entries. Ownership is never changed to manufacture a target.
+        if (favorites.size) {
+            const favoritePlan = makePlan(owned, nestCount, focus, "combo", salt, "combo", "favorite");
+            if (favoritePlan.edges.some((edge) => favorites.has(petKey(edge.mother.pet))))
+                return finalize({ kind: "combo", plan: favoritePlan }, "combo", "favorite");
+        }
         const rankedShinyPlans = (targetTier) => ["combo", "shiny"]
             .map((kind) => ({ kind, plan: makePlan(owned, nestCount, focus, kind, salt, "shiny", targetTier) }))
             .filter(({ plan }) => plan.slots.length > 0 && plan.pairedMothers > 0)
